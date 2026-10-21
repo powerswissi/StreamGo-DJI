@@ -30,6 +30,7 @@ class MainActivity : ComponentActivity() {
         // Initialize repository with context
         DjiRepository.initialize(this)
         AppSettingsRepository.initialize(this)
+        com.dimadesu.djiremote.preset.PresetRepository.initialize(this)
 
         enableEdgeToEdge()
         setContent {

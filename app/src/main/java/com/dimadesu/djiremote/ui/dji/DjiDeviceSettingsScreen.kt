@@ -21,6 +21,10 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dimadesu.djiremote.dji.*
+import com.dimadesu.djiremote.preset.ConnectionPreset
+import com.dimadesu.djiremote.preset.PresetRepository
+import com.dimadesu.djiremote.ui.preset.ManagePresetsDialog
+import com.dimadesu.djiremote.ui.preset.SavePresetDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,6 +53,13 @@ fun DjiDeviceSettingsScreen(
     var expandedImageStab by remember { mutableStateOf(false) }
     var expandedFps by remember { mutableStateOf(false) }
     var expandedWifiDropdown by remember { mutableStateOf(false) }
+
+    // Presets observation & state
+    val presets by PresetRepository.presets.collectAsState()
+    var showSavePresetDialog by remember { mutableStateOf(false) }
+    var showManagePresetsDialog by remember { mutableStateOf(false) }
+    var expandedPresetDropdown by remember { mutableStateOf(false) }
+    var presetFeedbackMessage by remember { mutableStateOf<String?>(null) }
 
     // WiFi scanner observation
     val wifiScanResults by WifiScanner.scanResults.collectAsState()
@@ -172,6 +183,178 @@ fun DjiDeviceSettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !liveDevice.isStarted
             )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // --- DIALOGS FOR PRESETS ---
+        if (showSavePresetDialog) {
+            SavePresetDialog(
+                initialSsid = ssid,
+                initialPassword = password,
+                initialRtmpUrl = rtmpUrl,
+                onDismiss = { showSavePresetDialog = false },
+                onSave = { saved ->
+                    showSavePresetDialog = false
+                    presetFeedbackMessage = "Vorlage '${saved.name}' gespeichert!"
+                }
+            )
+        }
+
+        if (showManagePresetsDialog) {
+            ManagePresetsDialog(
+                onDismiss = { showManagePresetsDialog = false },
+                onSelectPreset = { selected ->
+                    ssid = selected.wifiSsid
+                    if (selected.wifiPassword.isNotEmpty()) {
+                        password = selected.wifiPassword
+                    }
+                    if (selected.rtmpUrl.isNotEmpty()) {
+                        rtmpUrl = selected.rtmpUrl
+                    }
+                    liveDevice.wifiSsid = ssid
+                    liveDevice.wifiPassword = password
+                    liveDevice.rtmpUrl = rtmpUrl
+                    DjiRepository.updateDevice(liveDevice)
+                    presetFeedbackMessage = "Vorlage '${selected.name}' ins Profil übernommen"
+                }
+            )
+        }
+
+        // --- SECTION: Verbindungsvorlagen (Presets) ---
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        ) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "⚡ VERBINDUNGS-VORLAGEN",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "Gespeicherte WLAN & RTMP Vorlagen auswählen",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    OutlinedButton(
+                        onClick = { showManagePresetsDialog = true },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Verwalten (${presets.size})", fontSize = 11.sp)
+                    }
+                }
+
+                if (presets.isNotEmpty()) {
+                    ExposedDropdownMenuBox(
+                        expanded = expandedPresetDropdown,
+                        onExpandedChange = { if (!liveDevice.isStarted) expandedPresetDropdown = !expandedPresetDropdown }
+                    ) {
+                        OutlinedCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = !liveDevice.isStarted),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("📋 ", fontSize = 16.sp)
+                                    Column {
+                                        Text(
+                                            text = "Vorlage auswählen...",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Text(
+                                            text = "${presets.size} Vorlagen verfügbar",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedPresetDropdown)
+                            }
+                        }
+
+                        ExposedDropdownMenu(
+                            expanded = expandedPresetDropdown,
+                            onDismissRequest = { expandedPresetDropdown = false }
+                        ) {
+                            presets.forEach { item ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                                            Text(item.name, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                            Text(
+                                                text = "📶 WLAN: ${item.wifiSsid.ifEmpty { "–" }} • 🎥 RTMP: ${item.rtmpUrl.ifEmpty { "–" }}",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        ssid = item.wifiSsid
+                                        if (item.wifiPassword.isNotEmpty()) {
+                                            password = item.wifiPassword
+                                        }
+                                        if (item.rtmpUrl.isNotEmpty()) {
+                                            rtmpUrl = item.rtmpUrl
+                                        }
+                                        liveDevice.wifiSsid = ssid
+                                        liveDevice.wifiPassword = password
+                                        liveDevice.rtmpUrl = rtmpUrl
+                                        DjiRepository.updateDevice(liveDevice)
+                                        presetFeedbackMessage = "Vorlage '${item.name}' ins Profil übernommen"
+                                        expandedPresetDropdown = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilledTonalButton(
+                        onClick = { showSavePresetDialog = true },
+                        enabled = !liveDevice.isStarted,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Text("💾 Als neues Preset sichern", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+
+                if (presetFeedbackMessage != null) {
+                    Text(
+                        text = "✓ $presetFeedbackMessage",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF2E7D32),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))

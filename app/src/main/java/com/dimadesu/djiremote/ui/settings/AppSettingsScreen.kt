@@ -25,8 +25,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dimadesu.djiremote.dji.DjiDeviceStorage
 import com.dimadesu.djiremote.dji.DjiRepository
+import com.dimadesu.djiremote.preset.PresetRepository
 import com.dimadesu.djiremote.settings.AppSettingsRepository
 import com.dimadesu.djiremote.settings.AppThemeMode
+import com.dimadesu.djiremote.ui.preset.ManagePresetsDialog
 import kotlin.math.roundToInt
 
 @Composable
@@ -34,10 +36,18 @@ fun AppSettingsScreen(onBack: () -> Unit = {}) {
     val context = LocalContext.current
     val devices by DjiRepository.devices.collectAsState()
     val appSettings by AppSettingsRepository.settings.collectAsState()
+    val presets by PresetRepository.presets.collectAsState()
 
+    var showManagePresetsDialog by remember { mutableStateOf(false) }
     var showRestoreDialog by remember { mutableStateOf(false) }
     var restoreJsonText by remember { mutableStateOf("") }
     var restoreError by remember { mutableStateOf<String?>(null) }
+
+    if (showManagePresetsDialog) {
+        ManagePresetsDialog(
+            onDismiss = { showManagePresetsDialog = false }
+        )
+    }
 
     // Dialog for Restore
     if (showRestoreDialog) {
@@ -265,6 +275,35 @@ fun AppSettingsScreen(onBack: () -> Unit = {}) {
                 checked = appSettings.hapticFeedbackEnabled,
                 onCheckedChange = { AppSettingsRepository.updateSettings(appSettings.copy(hapticFeedbackEnabled = it)) }
             )
+        }
+
+        // Section: Presets
+        SettingsCard(title = "⚡ VERBINDUNGS-VORLAGEN (PRESETS)") {
+            Text(
+                "Verwalte gespeicherte WLAN- und RTMP-Kombinationen, um sie schnell in jedem Kamera-Profil anzuwenden.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${presets.size} Vorlage(n) hinterlegt",
+                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Button(
+                    onClick = { showManagePresetsDialog = true },
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Vorlagen verwalten")
+                }
+            }
         }
 
         // Section 4: Backup & Restore

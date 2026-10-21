@@ -37,6 +37,7 @@ enum class SettingsDjiDeviceImageStabilization {
 data class SettingsDjiDevice(
     val id: UUID = UUID.randomUUID(),
     var name: String = "DJI Device",
+    var customCameraName: String? = null,
     var bluetoothPeripheralName: String? = null,
     var bluetoothPeripheralId: UUID? = null,
     var bluetoothPeripheralAddress: String? = null,

@@ -36,6 +36,7 @@ fun DjiDeviceSettingsScreen(
     val liveDevice = allDevices.firstOrNull { it.id == device.id } ?: device
 
     var name by remember { mutableStateOf(liveDevice.name) }
+    var customCameraName by remember { mutableStateOf(liveDevice.customCameraName ?: "") }
     var ssid by remember { mutableStateOf(liveDevice.wifiSsid) }
     var password by remember { mutableStateOf(liveDevice.wifiPassword) }
     var rtmpUrl by remember { mutableStateOf(liveDevice.rtmpUrl) }
@@ -143,20 +144,33 @@ fun DjiDeviceSettingsScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Device section
-        Text("Device", style = MaterialTheme.typography.titleMedium)
+        Text("DJI Kamera", style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(8.dp))
         Button(
             onClick = onOpenScanner,
             modifier = Modifier.fillMaxWidth(),
             enabled = !liveDevice.isStarted
         ) {
-            Text(liveDevice.bluetoothPeripheralName ?: "Select device")
+            Text(liveDevice.bluetoothPeripheralName ?: "Kamera über Bluetooth auswählen")
         }
         if (liveDevice.bluetoothPeripheralAddress != null) {
             Text(
                 text = "${liveDevice.bluetoothPeripheralAddress} (${liveDevice.model})",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            TextField(
+                value = customCameraName,
+                onValueChange = { 
+                    customCameraName = it
+                    liveDevice.customCameraName = it.ifBlank { null }
+                    DjiRepository.updateDevice(liveDevice)
+                },
+                label = { Text("Eigener Kamera-Name (z.B. Helm-Cam)") },
+                placeholder = { Text("z.B. Helm-Cam, Brust-Cam, Cam 1") },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !liveDevice.isStarted
             )
         }
 
@@ -328,14 +342,36 @@ fun DjiDeviceSettingsScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         // RTMP section
-        Text("RTMP", style = MaterialTheme.typography.titleMedium)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("RTMP Stream-Ziel", style = MaterialTheme.typography.titleMedium)
+            FilledTonalButton(
+                onClick = {
+                    rtmpUrl = "rtmp://10.42.0.1:1935/publish/live"
+                    liveDevice.rtmpUrl = rtmpUrl
+                    DjiRepository.updateDevice(liveDevice)
+                },
+                enabled = !liveDevice.isStarted,
+                shape = RoundedCornerShape(8.dp),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+            ) {
+                Text("⚡ Belabox 1-Click", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+        }
         Spacer(modifier = Modifier.height(8.dp))
 
         TextField(
             value = rtmpUrl,
-            onValueChange = { rtmpUrl = it },
-            label = { Text("URL") },
-            placeholder = { Text("rtmp://server/live/stream") },
+            onValueChange = { 
+                rtmpUrl = it
+                liveDevice.rtmpUrl = it
+                DjiRepository.updateDevice(liveDevice)
+            },
+            label = { Text("RTMP URL") },
+            placeholder = { Text("rtmp://10.42.0.1:1935/publish/live") },
             modifier = Modifier.fillMaxWidth(),
             enabled = !liveDevice.isStarted
         )
@@ -557,6 +593,7 @@ fun DjiDeviceSettingsScreen(
             Button(
                 onClick = {
                     liveDevice.name = name
+                    liveDevice.customCameraName = customCameraName.ifBlank { null }
                     liveDevice.wifiSsid = ssid
                     liveDevice.wifiPassword = password
                     liveDevice.rtmpUrl = rtmpUrl

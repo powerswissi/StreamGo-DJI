@@ -142,9 +142,16 @@ fun DjiDevicesSettingsScreen(onOpenDevice: (SettingsDjiDevice) -> Unit) {
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold
                                     )
-                                    if (device.bluetoothPeripheralName != null) {
+                                    if (!device.customCameraName.isNullOrBlank()) {
                                         Text(
-                                            text = "${device.bluetoothPeripheralName} (${device.model})",
+                                            text = "📷 ${device.customCameraName} (${device.model})",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    } else if (device.bluetoothPeripheralName != null) {
+                                        Text(
+                                            text = "📷 ${device.bluetoothPeripheralName} (${device.model})",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )

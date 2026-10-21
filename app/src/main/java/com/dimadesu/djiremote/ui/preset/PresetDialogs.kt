@@ -14,6 +14,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dimadesu.djiremote.dji.WifiScanner
@@ -40,6 +43,7 @@ fun SavePresetDialog(
     var name by remember { mutableStateOf("") }
     var ssid by remember { mutableStateOf(initialSsid) }
     var password by remember { mutableStateOf(initialPassword) }
+    var isPasswordVisible by remember { mutableStateOf(false) }
     var rtmpUrl by remember { mutableStateOf(initialRtmpUrl) }
 
     var expandedWifiDropdown by remember { mutableStateOf(false) }
@@ -132,7 +136,15 @@ fun SavePresetDialog(
                     label = { Text("WLAN-Passwort") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    visualTransformation = PasswordVisualTransformation()
+                    visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                            Icon(
+                                imageVector = if (isPasswordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                contentDescription = if (isPasswordVisible) "Passwort verbergen" else "Passwort anzeigen"
+                            )
+                        }
+                    }
                 )
 
                 OutlinedTextField(
@@ -181,6 +193,7 @@ fun EditPresetDialog(
     var name by remember { mutableStateOf(preset.name) }
     var ssid by remember { mutableStateOf(preset.wifiSsid) }
     var password by remember { mutableStateOf(preset.wifiPassword) }
+    var isPasswordVisible by remember { mutableStateOf(false) }
     var rtmpUrl by remember { mutableStateOf(preset.rtmpUrl) }
 
     var expandedWifiDropdown by remember { mutableStateOf(false) }
@@ -264,7 +277,15 @@ fun EditPresetDialog(
                     label = { Text("WLAN-Passwort") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    visualTransformation = PasswordVisualTransformation()
+                    visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                            Icon(
+                                imageVector = if (isPasswordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                contentDescription = if (isPasswordVisible) "Passwort verbergen" else "Passwort anzeigen"
+                            )
+                        }
+                    }
                 )
 
                 OutlinedTextField(

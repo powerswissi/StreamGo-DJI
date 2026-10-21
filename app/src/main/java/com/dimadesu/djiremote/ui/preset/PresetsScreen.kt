@@ -30,6 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dimadesu.djiremote.dji.DjiRepository
 import com.dimadesu.djiremote.dji.WifiScanner
 import com.dimadesu.djiremote.preset.ConnectionPreset
 import com.dimadesu.djiremote.preset.PresetRepository
@@ -44,8 +45,10 @@ fun PresetsScreen(
 ) {
     val context = LocalContext.current
     val presets by PresetRepository.presets.collectAsState()
+    val devices by DjiRepository.devices.collectAsState()
 
     var showCreateDialog by remember { mutableStateOf(false) }
+    var showImportFromCameraDialog by remember { mutableStateOf(false) }
     var editingPreset by remember { mutableStateOf<ConnectionPreset?>(null) }
     var presetToDelete by remember { mutableStateOf<ConnectionPreset?>(null) }
     var showQrDialogForPreset by remember { mutableStateOf<ConnectionPreset?>(null) }
@@ -152,6 +155,74 @@ fun PresetsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { presetToDelete = null }) {
+                    Text("Abbrechen")
+                }
+            }
+        )
+    }
+
+    if (showImportFromCameraDialog) {
+        AlertDialog(
+            onDismissRequest = { showImportFromCameraDialog = false },
+            title = { Text("Aus Kamera importieren", fontWeight = FontWeight.Bold) },
+            text = {
+                if (devices.isEmpty()) {
+                    Text(
+                        "Keine Kamera-Profile vorhanden.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            "Wähle ein Kamera-Profil, um dessen WLAN und RTMP als neues Preset zu übernehmen:",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        LazyColumn(
+                            modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(devices) { dev ->
+                                OutlinedCard(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            prefillSsid = dev.wifiSsid
+                                            prefillPassword = dev.wifiPassword
+                                            prefillRtmp = dev.rtmpUrl
+                                            showImportFromCameraDialog = false
+                                            showCreateDialog = true
+                                        },
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        Text(
+                                            text = dev.customCameraName?.ifBlank { null } ?: dev.name,
+                                            fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        Text(
+                                            text = "📶 WLAN: ${dev.wifiSsid.ifEmpty { "–" }}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        if (dev.rtmpUrl.isNotEmpty()) {
+                                            Text(
+                                                text = "🎥 RTMP: ${dev.rtmpUrl.take(24)}...",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showImportFromCameraDialog = false }) {
                     Text("Abbrechen")
                 }
             }
@@ -292,6 +363,15 @@ fun PresetsScreen(
                             ) {
                                 Text("🖼️ Aus Bild", fontSize = 13.sp)
                             }
+                        }
+
+                        FilledTonalButton(
+                            onClick = { showImportFromCameraDialog = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(vertical = 6.dp)
+                        ) {
+                            Text("📹 Aus Kamera-Profil importieren", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }

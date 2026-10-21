@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dimadesu.djiremote.dji.*
@@ -44,6 +48,7 @@ fun DjiDeviceSettingsScreen(
     var customCameraName by remember { mutableStateOf(liveDevice.customCameraName ?: "") }
     var ssid by remember { mutableStateOf(liveDevice.wifiSsid) }
     var password by remember { mutableStateOf(liveDevice.wifiPassword) }
+    var isPasswordVisible by remember { mutableStateOf(false) }
     var rtmpUrl by remember { mutableStateOf(liveDevice.rtmpUrl) }
     var resolution by remember { mutableStateOf(liveDevice.resolution) }
     var bitrate by remember { mutableIntStateOf(liveDevice.bitrate) }
@@ -190,172 +195,88 @@ fun DjiDeviceSettingsScreen(
         HorizontalDivider()
         Spacer(modifier = Modifier.height(16.dp))
 
-        // --- DIALOGS FOR PRESETS ---
-        if (showSavePresetDialog) {
-            SavePresetDialog(
-                initialSsid = ssid,
-                initialPassword = password,
-                initialRtmpUrl = rtmpUrl,
-                onDismiss = { showSavePresetDialog = false },
-                onSave = { saved ->
-                    showSavePresetDialog = false
-                    presetFeedbackMessage = "Vorlage '${saved.name}' gespeichert!"
-                }
-            )
-        }
-
-        if (showManagePresetsDialog) {
-            ManagePresetsDialog(
-                onDismiss = { showManagePresetsDialog = false },
-                onSelectPreset = { selected ->
-                    ssid = selected.wifiSsid
-                    if (selected.wifiPassword.isNotEmpty()) {
-                        password = selected.wifiPassword
-                    }
-                    if (selected.rtmpUrl.isNotEmpty()) {
-                        rtmpUrl = selected.rtmpUrl
-                    }
-                    liveDevice.wifiSsid = ssid
-                    liveDevice.wifiPassword = password
-                    liveDevice.rtmpUrl = rtmpUrl
-                    DjiRepository.updateDevice(liveDevice)
-                    presetFeedbackMessage = "Vorlage '${selected.name}' ins Profil übernommen"
-                }
-            )
-        }
-
-        // --- SECTION: Verbindungsvorlagen (Presets) ---
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-        ) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+        // --- Quick Preset Selection (Optional) ---
+        if (presets.isNotEmpty()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "⚡ Vorlage anwenden (Optional)",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                TextButton(
+                    onClick = onOpenPresets,
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "⚡ VERBINDUNGS-VORLAGEN",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = "Gespeicherte WLAN & RTMP Vorlagen auswählen",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    OutlinedButton(
-                        onClick = onOpenPresets,
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text("Verwalten (${presets.size}) ➔", fontSize = 11.sp)
-                    }
-                }
-
-                if (presets.isNotEmpty()) {
-                    ExposedDropdownMenuBox(
-                        expanded = expandedPresetDropdown,
-                        onExpandedChange = { if (!liveDevice.isStarted) expandedPresetDropdown = !expandedPresetDropdown }
-                    ) {
-                        OutlinedCard(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = !liveDevice.isStarted),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(10.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("📋 ", fontSize = 16.sp)
-                                    Column {
-                                        Text(
-                                            text = "Vorlage auswählen...",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                        Text(
-                                            text = "${presets.size} Vorlagen verfügbar",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedPresetDropdown)
-                            }
-                        }
-
-                        ExposedDropdownMenu(
-                            expanded = expandedPresetDropdown,
-                            onDismissRequest = { expandedPresetDropdown = false }
-                        ) {
-                            presets.forEach { item ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                                            Text(item.name, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                            Text(
-                                                text = "📶 WLAN: ${item.wifiSsid.ifEmpty { "–" }} • 🎥 RTMP: ${item.rtmpUrl.ifEmpty { "–" }}",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    },
-                                    onClick = {
-                                        ssid = item.wifiSsid
-                                        if (item.wifiPassword.isNotEmpty()) {
-                                            password = item.wifiPassword
-                                        }
-                                        if (item.rtmpUrl.isNotEmpty()) {
-                                            rtmpUrl = item.rtmpUrl
-                                        }
-                                        liveDevice.wifiSsid = ssid
-                                        liveDevice.wifiPassword = password
-                                        liveDevice.rtmpUrl = rtmpUrl
-                                        DjiRepository.updateDevice(liveDevice)
-                                        presetFeedbackMessage = "Vorlage '${item.name}' ins Profil übernommen"
-                                        expandedPresetDropdown = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    FilledTonalButton(
-                        onClick = { showSavePresetDialog = true },
-                        enabled = !liveDevice.isStarted,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
-                    ) {
-                        Text("💾 Als neues Preset sichern", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                }
-
-                if (presetFeedbackMessage != null) {
-                    Text(
-                        text = "✓ $presetFeedbackMessage",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF2E7D32),
-                        fontWeight = FontWeight.Medium
-                    )
+                    Text("Vorlagen verwalten ➔", fontSize = 12.sp)
                 }
             }
+
+            ExposedDropdownMenuBox(
+                expanded = expandedPresetDropdown,
+                onExpandedChange = { if (!liveDevice.isStarted) expandedPresetDropdown = !expandedPresetDropdown }
+            ) {
+                OutlinedCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = !liveDevice.isStarted),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Vorlage auswählen...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedPresetDropdown)
+                    }
+                }
+
+                ExposedDropdownMenu(
+                    expanded = expandedPresetDropdown,
+                    onDismissRequest = { expandedPresetDropdown = false }
+                ) {
+                    presets.forEach { item ->
+                        DropdownMenuItem(
+                            text = {
+                                Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                                    Text(item.name, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                    Text(
+                                        text = "📶 WLAN: ${item.wifiSsid.ifEmpty { "–" }} • 🎥 RTMP: ${item.rtmpUrl.ifEmpty { "–" }}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            },
+                            onClick = {
+                                ssid = item.wifiSsid
+                                if (item.wifiPassword.isNotEmpty()) {
+                                    password = item.wifiPassword
+                                }
+                                if (item.rtmpUrl.isNotEmpty()) {
+                                    rtmpUrl = item.rtmpUrl
+                                }
+                                liveDevice.wifiSsid = ssid
+                                liveDevice.wifiPassword = password
+                                liveDevice.rtmpUrl = rtmpUrl
+                                DjiRepository.updateDevice(liveDevice)
+                                expandedPresetDropdown = false
+                            }
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -511,7 +432,15 @@ fun DjiDeviceSettingsScreen(
             label = { Text("Password") },
             modifier = Modifier.fillMaxWidth(),
             enabled = !liveDevice.isStarted,
-            visualTransformation = PasswordVisualTransformation()
+            visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                    Icon(
+                        imageVector = if (isPasswordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                        contentDescription = if (isPasswordVisible) "Passwort verbergen" else "Passwort anzeigen"
+                    )
+                }
+            }
         )
 
         Spacer(modifier = Modifier.height(4.dp))

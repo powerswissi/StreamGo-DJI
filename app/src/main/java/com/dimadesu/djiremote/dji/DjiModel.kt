@@ -144,6 +144,12 @@ object DjiModel : DjiDeviceDelegate {
                     lastError = error,
                     lastErrorTimestamp = System.currentTimeMillis()
                 )
+            } else if (newState == SettingsDjiDeviceState.STREAMING) {
+                // Wenn der Stream erfolgreich aktiv läuft, alten Fehler verwerfen!
+                updated = updated.copy(
+                    lastError = null,
+                    lastErrorTimestamp = null
+                )
             }
 
             when (state) {

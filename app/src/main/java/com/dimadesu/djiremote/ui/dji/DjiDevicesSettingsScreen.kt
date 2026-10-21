@@ -370,8 +370,8 @@ fun DjiDevicesSettingsScreen(
                                 )
                             }
 
-                            // Show last error if present
-                            if (!device.lastError.isNullOrBlank()) {
+                            // Show last error if present (nur wenn nicht erfolgreich live gestreamt wird)
+                            if (!device.lastError.isNullOrBlank() && !isStreaming) {
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     text = "⚠️ ${device.lastError}",

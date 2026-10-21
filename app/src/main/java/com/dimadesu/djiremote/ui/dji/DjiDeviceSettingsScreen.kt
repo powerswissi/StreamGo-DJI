@@ -27,8 +27,6 @@ import androidx.compose.ui.unit.sp
 import com.dimadesu.djiremote.dji.*
 import com.dimadesu.djiremote.preset.ConnectionPreset
 import com.dimadesu.djiremote.preset.PresetRepository
-import com.dimadesu.djiremote.ui.preset.ManagePresetsDialog
-import com.dimadesu.djiremote.ui.preset.SavePresetDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,10 +60,7 @@ fun DjiDeviceSettingsScreen(
 
     // Presets observation & state
     val presets by PresetRepository.presets.collectAsState()
-    var showSavePresetDialog by remember { mutableStateOf(false) }
-    var showManagePresetsDialog by remember { mutableStateOf(false) }
     var expandedPresetDropdown by remember { mutableStateOf(false) }
-    var presetFeedbackMessage by remember { mutableStateOf<String?>(null) }
 
     // WiFi scanner observation
     val wifiScanResults by WifiScanner.scanResults.collectAsState()

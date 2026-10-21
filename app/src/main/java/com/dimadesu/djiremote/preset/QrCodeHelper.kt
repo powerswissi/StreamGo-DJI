@@ -154,8 +154,9 @@ object QrCodeHelper {
      */
     fun decodeFromImageUri(context: Context, uri: Uri): QrParsedResult? {
         return try {
-            val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
-            val bitmap = BitmapFactory.decodeStream(inputStream) ?: return null
+            val bitmap = context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                BitmapFactory.decodeStream(inputStream)
+            } ?: return null
             val width = bitmap.width
             val height = bitmap.height
             val pixels = IntArray(width * height)

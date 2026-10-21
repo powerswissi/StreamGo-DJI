@@ -28,7 +28,6 @@ import com.dimadesu.djiremote.dji.DjiRepository
 import com.dimadesu.djiremote.preset.PresetRepository
 import com.dimadesu.djiremote.settings.AppSettingsRepository
 import com.dimadesu.djiremote.settings.AppThemeMode
-import com.dimadesu.djiremote.ui.preset.ManagePresetsDialog
 import kotlin.math.roundToInt
 
 @Composable
@@ -41,16 +40,9 @@ fun AppSettingsScreen(
     val appSettings by AppSettingsRepository.settings.collectAsState()
     val presets by PresetRepository.presets.collectAsState()
 
-    var showManagePresetsDialog by remember { mutableStateOf(false) }
     var showRestoreDialog by remember { mutableStateOf(false) }
     var restoreJsonText by remember { mutableStateOf("") }
     var restoreError by remember { mutableStateOf<String?>(null) }
-
-    if (showManagePresetsDialog) {
-        ManagePresetsDialog(
-            onDismiss = { showManagePresetsDialog = false }
-        )
-    }
 
     // Dialog for Restore
     if (showRestoreDialog) {

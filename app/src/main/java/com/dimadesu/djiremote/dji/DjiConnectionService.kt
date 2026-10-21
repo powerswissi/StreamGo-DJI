@@ -12,6 +12,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.annotation.SuppressLint
+import android.net.wifi.WifiManager
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
@@ -26,6 +27,7 @@ class DjiConnectionService : Service() {
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private var devicesJob: Job? = null
     private var wakeLock: PowerManager.WakeLock? = null
+    private var wifiLock: WifiManager.WifiLock? = null
     private val wakeLockHandler = Handler(Looper.getMainLooper())
     private val wakeLockRunnable = object : Runnable {
         override fun run() {
@@ -44,6 +46,7 @@ class DjiConnectionService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForeground(NOTIFICATION_ID, buildNotification())
         acquireWakeLock()
+        acquireWifiLock()
         observeDevices()
         return START_STICKY
     }
@@ -54,6 +57,7 @@ class DjiConnectionService : Service() {
         super.onDestroy()
         devicesJob?.cancel()
         releaseWakeLock()
+        releaseWifiLock()
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
@@ -99,6 +103,37 @@ class DjiConnectionService : Service() {
             // Best-effort release; ignore.
         }
         wakeLock = null
+    }
+
+    @SuppressLint("WakelockTimeout")
+    private fun acquireWifiLock() {
+        if (wifiLock == null) {
+            val wm = applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+            wifiLock = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                wm?.createWifiLock(WifiManager.WIFI_MODE_FULL_LOW_LATENCY, "DjiRemote:WifiLock")
+            } else {
+                @Suppress("DEPRECATION")
+                wm?.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "DjiRemote:WifiLock")
+            }
+        }
+        try {
+            if (wifiLock?.isHeld != true) {
+                wifiLock?.acquire()
+            }
+        } catch (e: Exception) {
+            // Best-effort
+        }
+    }
+
+    private fun releaseWifiLock() {
+        try {
+            if (wifiLock?.isHeld == true) {
+                wifiLock?.release()
+            }
+        } catch (e: Exception) {
+            // Best-effort
+        }
+        wifiLock = null
     }
 
     private fun createNotificationChannel() {

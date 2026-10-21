@@ -367,7 +367,7 @@ fun AppSettingsScreen(
                     }
                     Column {
                         Text("StreamGo DJI by Swissi", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                        Text("Version 1.0.3 • 100% Vibe Coding", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Version 1.0.4 • 100% Vibe Coding", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
 

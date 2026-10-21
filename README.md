@@ -72,7 +72,7 @@
 ## 🚀 Schnellstart & Installation
 
 1. Gehe zu den [**Releases**](https://github.com/powerswissi/StreamGo-DJI/releases/latest).
-2. Lade die Datei `dji-remote-v1.0.0-release.apk` auf dein Android-Smartphone herunter.
+2. Lade die neueste `dji-remote-v...-release.apk` auf dein Android-Smartphone herunter.
 3. Öffne die APK und erlaube die Installation aus unbekannten Quellen.
 4. Schalte Bluetooth & Standort auf deinem Handy ein, schalte deine DJI-Kamera ein und verbinde dich in der App!
 

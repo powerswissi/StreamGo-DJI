@@ -20,6 +20,7 @@ import com.dimadesu.djiremote.dji.SettingsDjiDevice
 import com.dimadesu.djiremote.ui.dji.DjiBleScannerScreen
 import com.dimadesu.djiremote.ui.dji.DjiDeviceSettingsScreen
 import com.dimadesu.djiremote.ui.dji.DjiDevicesSettingsScreen
+import com.dimadesu.djiremote.ui.preset.PresetsScreen
 import com.dimadesu.djiremote.ui.settings.AppSettingsScreen
 import com.dimadesu.djiremote.ui.theme.DJIRemoteTheme
 
@@ -71,7 +72,7 @@ class MainActivity : ComponentActivity() {
             }
 
             DJIRemoteTheme(darkTheme = darkTheme) {
-                var screen by remember { mutableStateOf("devices") } // "devices", "device", "device-scanner", "settings"
+                var screen by remember { mutableStateOf("devices") } // "devices", "device", "device-scanner", "settings", "presets"
                 var selectedDevice by remember { mutableStateOf<SettingsDjiDevice?>(null) }
 
                 BackHandler(enabled = screen != "devices") {
@@ -79,6 +80,7 @@ class MainActivity : ComponentActivity() {
                         "device" -> "devices"
                         "device-scanner" -> "device"
                         "settings" -> "devices"
+                        "presets" -> "devices"
                         else -> "devices"
                     }
                 }
@@ -94,6 +96,9 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onOpenSettings = {
                                         screen = "settings"
+                                    },
+                                    onOpenPresets = {
+                                        screen = "presets"
                                     }
                                 )
                             }
@@ -104,6 +109,9 @@ class MainActivity : ComponentActivity() {
                                         onBack = { screen = "devices" },
                                         onOpenScanner = {
                                             screen = "device-scanner"
+                                        },
+                                        onOpenPresets = {
+                                            screen = "presets"
                                         }
                                     )
                                 }
@@ -126,7 +134,13 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             "settings" -> {
-                                AppSettingsScreen(onBack = { screen = "devices" })
+                                AppSettingsScreen(
+                                    onBack = { screen = "devices" },
+                                    onOpenPresets = { screen = "presets" }
+                                )
+                            }
+                            "presets" -> {
+                                PresetsScreen(onBack = { screen = "devices" })
                             }
                         }
                     }

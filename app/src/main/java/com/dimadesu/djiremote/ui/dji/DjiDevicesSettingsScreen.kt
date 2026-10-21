@@ -27,7 +27,8 @@ import java.util.Locale
 @Composable
 fun DjiDevicesSettingsScreen(
     onOpenDevice: (SettingsDjiDevice) -> Unit,
-    onOpenSettings: () -> Unit
+    onOpenSettings: () -> Unit,
+    onOpenPresets: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val devices by DjiRepository.devices.collectAsState()
@@ -110,7 +111,14 @@ fun DjiDevicesSettingsScreen(
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                FilledTonalButton(
+                    onClick = onOpenPresets,
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text("⚡ Vorlagen", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
                 IconButton(onClick = onOpenSettings) {
                     Text("⚙️", fontSize = 20.sp)
                 }

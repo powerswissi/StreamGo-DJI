@@ -32,7 +32,10 @@ import com.dimadesu.djiremote.ui.preset.ManagePresetsDialog
 import kotlin.math.roundToInt
 
 @Composable
-fun AppSettingsScreen(onBack: () -> Unit = {}) {
+fun AppSettingsScreen(
+    onBack: () -> Unit = {},
+    onOpenPresets: () -> Unit = {}
+) {
     val context = LocalContext.current
     val devices by DjiRepository.devices.collectAsState()
     val appSettings by AppSettingsRepository.settings.collectAsState()
@@ -298,10 +301,10 @@ fun AppSettingsScreen(onBack: () -> Unit = {}) {
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Button(
-                    onClick = { showManagePresetsDialog = true },
+                    onClick = onOpenPresets,
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Vorlagen verwalten")
+                    Text("Vorlagen verwalten ➔")
                 }
             }
         }

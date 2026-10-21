@@ -31,7 +31,8 @@ import com.dimadesu.djiremote.ui.preset.SavePresetDialog
 fun DjiDeviceSettingsScreen(
     device: SettingsDjiDevice,
     onBack: () -> Unit = {},
-    onOpenScanner: () -> Unit = {}
+    onOpenScanner: () -> Unit = {},
+    onOpenPresets: () -> Unit = {}
 ) {
     val context = LocalContext.current
 
@@ -249,11 +250,11 @@ fun DjiDeviceSettingsScreen(
                         )
                     }
                     OutlinedButton(
-                        onClick = { showManagePresetsDialog = true },
+                        onClick = onOpenPresets,
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text("Verwalten (${presets.size})", fontSize = 11.sp)
+                        Text("Verwalten (${presets.size}) ➔", fontSize = 11.sp)
                     }
                 }
 

@@ -1176,6 +1176,8 @@ class DjiDevice(private val context: Context) {
                         djiLog("Kamera-Temperatur empfangen: ${tempC}°C")
                     }
                 }
+                // Telemetrie sofort via Delegate an DjiModel weiterleiten!
+                delegate?.djiDeviceStreamingState(this, state, null)
             }
             BROADCAST_STATUS_TYPE_1, BROADCAST_STATUS_TYPE_2 -> {
                 // In DJI broadcast telemetry (target 0x0802, type 0x03EE80 or 0x03EE40):

@@ -205,6 +205,22 @@ fun DjiDevicesSettingsScreen(
                                                 )
                                             }
                                         }
+                                        // Batterie-Badge prominent direkt im Header!
+                                        if (device.batteryPercentage != null) {
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = if (device.batteryPercentage!! <= 20) Color(0xFFD32F2F) else Color(0xFF2E7D32)
+                                            ) {
+                                                Text(
+                                                    "🔋 ${device.batteryPercentage}%",
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                    color = Color.White,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 10.sp
+                                                )
+                                            }
+                                        }
                                     }
 
                                     val camName = device.customCameraName?.takeIf { it.isNotBlank() }
@@ -288,10 +304,12 @@ fun DjiDevicesSettingsScreen(
                                 val streamedMb = if (isStreaming && streamSec > 0) {
                                     val bytesTransferred = (device.bitrate.toDouble() / 8.0) * streamSec
                                     val mb = bytesTransferred / (1024.0 * 1024.0)
+                                    val mbPerSec = (device.bitrate.toDouble() / 8.0) / (1024.0 * 1024.0)
+                                    val rateStr = String.format(Locale.getDefault(), "%.1f MB/s", mbPerSec)
                                     if (mb >= 1000.0) {
-                                        String.format(Locale.getDefault(), "%.2f GB", mb / 1024.0)
+                                        String.format(Locale.getDefault(), "%.2f GB (↑%s)", mb / 1024.0, rateStr)
                                     } else {
-                                        String.format(Locale.getDefault(), "%.1f MB", mb)
+                                        String.format(Locale.getDefault(), "%.1f MB (↑%s)", mb, rateStr)
                                     }
                                 } else null
 

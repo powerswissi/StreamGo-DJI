@@ -16,9 +16,17 @@ Die schnelle, zuverlässige Android-App zur Steuerung von DJI Action- und Pocket
 
 ## Features
 - ⚡ **1-Click Stream direkt aus der Profil-Liste** (Start / Stop ohne Klick-Umwege)
-- 🔄 **Automatischer Reconnect bei Signalverlust** (verbindet ohne Nachfragen sofort neu)
+- 📱 **Android Homescreen Widget** (Live-Stream direkt vom Smartphone-Homescreen starten & stoppen inkl. Status & Akkuanzeige)
+- 🔍 **Integrierte WLAN-Suche & Scanner** (zeigt verfügbare Netzwerke mit Signalstärke, GHz-Band & Verschlüsselung direkt zur Auswahl)
+- 🏷️ **Eigene Kamera-Namen / Nicknames** (z.B. Helm-Cam, Bike, Rucksack zur perfekten Unterscheidung)
+- ⚡ **1-Click Belabox Setup** (automatisches Ausfüllen der RTMP-URL für Belabox Hotspots)
+- 📊 **Echtzeit-Telemetrie**:
+  - Live-Encoder-Bitrate (Mbit/s)
+  - Stream-Laufzeit (Stoppuhr) & geschätztes Datenvolumen (MB / GB)
+  - Live-Akkuanzeige & Kamera-Temperatur (°C)
+  - WLAN-Signalstärke & Frequenzband (2.4 / 5 GHz)
+- 🔄 **Automatischer Reconnect bei Signalverlust** (verbindet bei Funkausriss ohne Nachfragen sofort neu)
 - 🛑 **Intelligente manuelle Abbruch-Erkennung** (kein ungewollter Reconnect bei Stop am Touchscreen der Osmo oder in der App)
-- 🔋 **Live-Akkuanzeige** der DJI-Kamera direkt in der App
 - 📋 **Beliebige Profile verwalten & einzeln löschen** (ideal für Belabox, Heim-WLAN, mobile Hotspots)
 - ⏱️ **Zero-Friction UI**: Minimaler Overhead, maximale Stabilität in der Praxis
 
@@ -26,9 +34,9 @@ Die schnelle, zuverlässige Android-App zur Steuerung von DJI Action- und Pocket
 
 ## Screenshots
 
-| Profile & Live-Status | Kamera & WLAN | Stream-Einstellungen |
-|:---:|:---:|:---:|
-| <img src="docs/screenshots/profiles.png" width="260"> | <img src="docs/screenshots/camera-wifi.png" width="260"> | <img src="docs/screenshots/stream-settings.png" width="260"> |
+| Profile & Live-Status | Kamera & WLAN | Stream-Einstellungen | Android Homescreen Widget |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/profiles.png" width="220"> | <img src="docs/screenshots/camera-wifi.png" width="220"> | <img src="docs/screenshots/stream-settings.png" width="220"> | <img src="docs/screenshots/widget.png" width="220"> |
 
 ---
 

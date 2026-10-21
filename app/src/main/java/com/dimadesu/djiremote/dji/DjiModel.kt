@@ -136,7 +136,8 @@ object DjiModel : DjiDeviceDelegate {
 
             var updated = existing.copy(
                 state = newState,
-                batteryPercentage = device.getBatteryPercentage()
+                batteryPercentage = device.getBatteryPercentage(),
+                cameraTemperature = device.getCameraTemperature()
             )
 
             if (error != null) {

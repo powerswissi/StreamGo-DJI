@@ -271,14 +271,29 @@ fun DjiDevicesSettingsScreen(
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                                 Spacer(modifier = Modifier.height(10.dp))
 
-                                val stopwatch = device.streamingStartedAt?.let { start ->
-                                    val totalSec = ((now - start).coerceAtLeast(0)) / 1000
-                                    val h = totalSec / 3600
-                                    val m = (totalSec % 3600) / 60
-                                    val s = totalSec % 60
+                                val streamSec = device.streamingStartedAt?.let { start ->
+                                    ((now - start).coerceAtLeast(0)) / 1000
+                                } ?: 0L
+
+                                val stopwatch = if (streamSec > 0) {
+                                    val h = streamSec / 3600
+                                    val m = (streamSec % 3600) / 60
+                                    val s = streamSec % 60
                                     if (h > 0) String.format(Locale.getDefault(), "%02d:%02d:%02d", h, m, s)
                                     else String.format(Locale.getDefault(), "%02d:%02d", m, s)
-                                } ?: "--:--"
+                                } else "--:--"
+
+                                // Berechnetes übertragendes Datenvolumen in Megabyte (MB)
+                                // Formel: (bitrate_bps / 8) * sekunden / 1.000.000
+                                val streamedMb = if (isStreaming && streamSec > 0) {
+                                    val bytesTransferred = (device.bitrate.toDouble() / 8.0) * streamSec
+                                    val mb = bytesTransferred / (1024.0 * 1024.0)
+                                    if (mb >= 1000.0) {
+                                        String.format(Locale.getDefault(), "%.2f GB", mb / 1024.0)
+                                    } else {
+                                        String.format(Locale.getDefault(), "%.1f MB", mb)
+                                    }
+                                } else null
 
                                 val statusLabel = when (device.state) {
                                     SettingsDjiDeviceState.DISCOVERING -> "Sucht DJI Kamera..."
@@ -312,18 +327,38 @@ fun DjiDevicesSettingsScreen(
                                                 else -> MaterialTheme.colorScheme.primary
                                             }
                                         )
-                                        if (device.batteryPercentage != null) {
-                                            Text(
-                                                text = "🔋 Akku: ${device.batteryPercentage}%",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = if (device.batteryPercentage!! <= 20) Color(0xFFD32F2F) else Color(0xFF2E7D32)
-                                            )
+
+                                        // Telemetrie: Akku + Temperatur
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            if (device.batteryPercentage != null) {
+                                                Text(
+                                                    text = "🔋 ${device.batteryPercentage}%",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = if (device.batteryPercentage!! <= 20) Color(0xFFD32F2F) else Color(0xFF2E7D32)
+                                                )
+                                            }
+                                            if (device.cameraTemperature != null) {
+                                                Text(
+                                                    text = "🌡️ ${device.cameraTemperature}°C",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = if (device.cameraTemperature!! >= 60) Color(0xFFD32F2F) else MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
                                         }
                                     }
 
                                     Column(horizontalAlignment = Alignment.End) {
-                                        Text("STREAM-ZEIT", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(
+                                            text = if (streamedMb != null) "LAUFZEIT • $streamedMb" else "STREAM-ZEIT",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (streamedMb != null) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                         Text(
                                             text = stopwatch,
                                             fontFamily = FontFamily.Monospace,

@@ -116,6 +116,7 @@ class DjiDevice(private val context: Context) {
     private var deviceAddress: String? = null
     private var model: SettingsDjiDeviceModel = SettingsDjiDeviceModel.UNKNOWN
     private var batteryPercentage: Int? = null
+    private var cameraTemperature: Int? = null
 
     private var userInitiatedStop: Boolean = false
     private var reconnectAttempts: Int = 0
@@ -264,6 +265,7 @@ class DjiDevice(private val context: Context) {
     }
 
     fun getBatteryPercentage(): Int? = batteryPercentage
+    fun getCameraTemperature(): Int? = cameraTemperature
     fun getLastError(): String? = lastError
     fun getReconnectAttempts(): Int = reconnectAttempts
 
@@ -281,6 +283,7 @@ class DjiDevice(private val context: Context) {
 
         releaseGatt()
         batteryPercentage = null
+        cameraTemperature = null
         seenActiveStreamInCurrentSession = false
         rxBuffer = ByteArray(0)
         clearWriteState()
@@ -1163,6 +1166,15 @@ class DjiDevice(private val context: Context) {
                     val battery = message.payload[20].toInt() and 0xFF
                     batteryPercentage = battery
                     djiLog("Batteriestatus empfangen: $battery%")
+                }
+                if (message.payload.size >= 23) {
+                    // Byte 21 und 22: Temperatur in 0.1°C (z. B. 0x0186 = 390 -> 39°C)
+                    val rawTemp = ((message.payload[22].toInt() and 0xFF) shl 8) or (message.payload[21].toInt() and 0xFF)
+                    val tempC = if (rawTemp in 100..900) rawTemp / 10 else rawTemp
+                    if (tempC in 15..95) {
+                        cameraTemperature = tempC
+                        djiLog("Kamera-Temperatur empfangen: ${tempC}°C")
+                    }
                 }
             }
             BROADCAST_STATUS_TYPE_1, BROADCAST_STATUS_TYPE_2 -> {

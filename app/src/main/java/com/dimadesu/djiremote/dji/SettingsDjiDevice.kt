@@ -53,6 +53,7 @@ data class SettingsDjiDevice(
     @Transient var isStarted: Boolean = false,
     @Transient var state: SettingsDjiDeviceState = SettingsDjiDeviceState.IDLE,
     @Transient var batteryPercentage: Int? = null,
+    @Transient var cameraTemperature: Int? = null,
     @Transient var streamingStartedAt: Long? = null,
     @Transient var lastError: String? = null,
     @Transient var lastErrorTimestamp: Long? = null,

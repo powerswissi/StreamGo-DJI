@@ -118,16 +118,6 @@ fun DjiDevicesSettingsScreen(
                 IconButton(onClick = onOpenSettings) {
                     Text("⚙️", fontSize = 20.sp)
                 }
-                Button(
-                    onClick = {
-                        val d = SettingsDjiDevice(name = "Profil ${devices.size + 1}")
-                        DjiRepository.addDevice(d)
-                    },
-                    shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
-                ) {
-                    Text("+ Neu", fontWeight = FontWeight.Bold)
-                }
             }
         }
 

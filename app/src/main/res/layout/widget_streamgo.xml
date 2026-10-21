@@ -3,16 +3,16 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="12dp"
+    android:padding="8dp"
     android:background="@drawable/widget_background">
 
-    <!-- Header Row -->
+    <!-- Header Row (ultra compact) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:layout_marginBottom="8dp">
+        android:layout_marginBottom="4dp">
 
         <TextView
             android:layout_width="0dp"
@@ -20,25 +20,26 @@
             android:layout_weight="1"
             android:text="StreamGo DJI"
             android:textColor="#FFFFFF"
-            android:textSize="15sp"
+            android:textSize="13sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/widget_app_link"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="App öffnen ↗"
+            android:text="App ↗"
             android:textColor="#3B82F6"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:textStyle="bold"
-            android:padding="4dp" />
+            android:padding="2dp" />
     </LinearLayout>
 
     <!-- Container where dynamic profiles will be placed -->
     <LinearLayout
         android:id="@+id/widget_profiles_container"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:orientation="vertical">
 
         <!-- Default Empty / Fallback Item -->
@@ -48,8 +49,8 @@
             android:layout_height="wrap_content"
             android:text="Keine Profile in StreamGo gefunden"
             android:textColor="#AAAAAA"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:gravity="center"
-            android:padding="8dp" />
+            android:padding="4dp" />
     </LinearLayout>
 </LinearLayout>

@@ -34,18 +34,6 @@ object PresetRepository {
                 _presets.value = emptyList()
             }
         }
-
-        if (_presets.value.isEmpty()) {
-            _presets.value = listOf(
-                ConnectionPreset(
-                    name = "Belabox Standard",
-                    wifiSsid = "belabox",
-                    wifiPassword = "password",
-                    rtmpUrl = "rtmp://10.42.0.1:1935/publish/live"
-                )
-            )
-            saveToStorage()
-        }
     }
 
     private fun saveToStorage() {

@@ -1,17 +1,15 @@
 package com.dimadesu.djiremote.ui.dashboard
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.background
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -20,8 +18,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dimadesu.djiremote.dji.*
 import kotlinx.coroutines.delay
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 
 @Composable
@@ -33,7 +29,6 @@ fun DashboardScreen(
     val scanResults by WifiScanner.scanResults.collectAsState()
     val isScanningWifi by WifiScanner.isScanning.collectAsState()
 
-    // Periodically update stopwatch and trigger wifi scan
     var now by remember { mutableStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
         WifiScanner.startScan(context)
@@ -43,310 +38,112 @@ fun DashboardScreen(
         }
     }
 
-    // Active or first device
-    val activeDevice = devices.firstOrNull { it.isStarted }
-    val displayDevice = activeDevice ?: devices.firstOrNull()
+    val activeDevices = devices.filter { it.isStarted }
+    val idleDevices = devices.filter { !it.isStarted }
 
-    Column(
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Top Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = "Live Dashboard",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "Echtzeit-Telemetrie & Verbindungsstatus",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            if (activeDevice != null) {
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = Color(0xFFD32F2F)
+        // Dashboard Header
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Live Dashboard",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = if (activeDevices.isNotEmpty()) {
+                            "${activeDevices.size} Kamera(s) aktiv / im Einsatz"
+                        } else {
+                            "Keine Kameras aktiv (Standby)"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (activeDevices.isNotEmpty()) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = if (activeDevices.isNotEmpty()) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+
+                IconButton(
+                    onClick = { WifiScanner.startScan(context) },
+                    enabled = !isScanningWifi
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(Color.White)
-                        )
-                        Text(
-                            "LIVE",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
-                        )
-                    }
+                    Text(if (isScanningWifi) "⏳" else "🔄", fontSize = 18.sp)
                 }
             }
         }
 
-        if (displayDevice == null) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Keine Profile vorhanden.", style = MaterialTheme.typography.bodyMedium)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = onNavigateToProfiles) {
-                        Text("Zu den Profilen")
+        if (devices.isEmpty()) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("Noch keine Kamera-Profile angelegt.")
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(onClick = onNavigateToProfiles) {
+                            Text("Profil erstellen")
+                        }
                     }
                 }
             }
         } else {
-            // Main Live Status Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = when (displayDevice.state) {
-                        SettingsDjiDeviceState.STREAMING -> Color(0xFF1B5E20)
-                        SettingsDjiDeviceState.RECONNECTING -> Color(0xFFE65100)
-                        SettingsDjiDeviceState.WIFI_SETUP_FAILED -> MaterialTheme.colorScheme.errorContainer
-                        else -> MaterialTheme.colorScheme.surfaceVariant
-                    }
-                )
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    val statusText = when (displayDevice.state) {
-                        SettingsDjiDeviceState.IDLE -> "Bereit (Standby)"
-                        SettingsDjiDeviceState.DISCOVERING -> "Sucht DJI Kamera..."
-                        SettingsDjiDeviceState.CONNECTING -> "Verbindet Bluetooth..."
-                        SettingsDjiDeviceState.PAIRING -> "Bluetooth-Kopplung..."
-                        SettingsDjiDeviceState.STOPPING_STREAM -> "Stoppt Live-Stream..."
-                        SettingsDjiDeviceState.PREPARING_STREAM -> "Bereitet Stream vor..."
-                        SettingsDjiDeviceState.SETTING_UP_WIFI -> "WLAN-Konfiguration..."
-                        SettingsDjiDeviceState.WIFI_SETUP_FAILED -> "WLAN-Setup fehlgeschlagen"
-                        SettingsDjiDeviceState.CONFIGURING -> "Kamera-Setup..."
-                        SettingsDjiDeviceState.STARTING_STREAM -> "Initialisiere RTMP..."
-                        SettingsDjiDeviceState.STREAMING -> "STREAMING AKTIV"
-                        SettingsDjiDeviceState.RECONNECTING -> "Signal verloren - Reconnect (#${displayDevice.reconnectAttempt})..."
-                        else -> "Unbekannt"
-                    }
-
-                    val titleColor = when (displayDevice.state) {
-                        SettingsDjiDeviceState.STREAMING, SettingsDjiDeviceState.RECONNECTING -> Color.White
-                        else -> MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = statusText,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = titleColor
-                        )
-
-                        // Camera Battery Badge
-                        displayDevice.batteryPercentage?.let { batt ->
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = if (batt <= 20) Color(0xFFD32F2F) else Color(0xFF388E3C)
-                            ) {
-                                Text(
-                                    text = "🔋 $batt%",
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Stream Time Stopwatch
-                    val streamTimeFormatted = displayDevice.streamingStartedAt?.let { start ->
-                        val durationMs = (now - start).coerceAtLeast(0)
-                        val totalSeconds = durationMs / 1000
-                        val hours = totalSeconds / 3600
-                        val minutes = (totalSeconds % 3600) / 60
-                        val seconds = totalSeconds % 60
-                        if (hours > 0) {
-                            String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds)
-                        } else {
-                            String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds)
-                        }
-                    } ?: "00:00"
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Bottom
-                    ) {
-                        Column {
-                            Text(
-                                text = "STREAM-LAUFZEIT",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = titleColor.copy(alpha = 0.8f),
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = streamTimeFormatted,
-                                style = MaterialTheme.typography.headlineLarge,
-                                fontWeight = FontWeight.ExtraBold,
-                                fontFamily = FontFamily.Monospace,
-                                color = titleColor
-                            )
-                        }
-
-                        // Start / Stop Quick Button
-                        if (displayDevice.isStarted) {
-                            Button(
-                                onClick = { DjiModel.stopStreaming(displayDevice) },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text("■ STOP", fontWeight = FontWeight.Bold, color = Color.White)
-                            }
-                        } else {
-                            Button(
-                                onClick = { DjiModel.startStreaming(context, displayDevice) },
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text("▶ START", fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Camera Hardware & Profile Details Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Section 1: ACTIVE / RUNNING CAMERAS
+            if (activeDevices.isNotEmpty()) {
+                item {
                     Text(
-                        "Kamera-Hardware & Profil",
-                        style = MaterialTheme.typography.titleSmall,
+                        "AKTIVE KAMERAS (${activeDevices.size})",
+                        style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = Color(0xFF2E7D32)
                     )
-
-                    val camDisplay = displayDevice.customCameraName?.takeIf { it.isNotBlank() }
-                        ?.let { "$it (${displayDevice.model})" }
-                        ?: "${displayDevice.bluetoothPeripheralName ?: "Nicht gekoppelt"} (${displayDevice.model})"
-
-                    DashboardInfoRow(label = "Aktives Profil", value = displayDevice.name)
-                    DashboardInfoRow(label = "Kamera", value = camDisplay)
-                    DashboardInfoRow(label = "Bluetooth MAC", value = displayDevice.bluetoothPeripheralAddress ?: "Keine")
-                    DashboardInfoRow(
-                        label = "Stream-Format",
-                        value = "${displayDevice.resolution} @ ${displayDevice.fps}fps (${displayDevice.bitrate / 1_000_000} Mbps)"
-                    )
-                    DashboardInfoRow(label = "Stabilisierung", value = displayDevice.imageStabilization.name)
                 }
-            }
 
-            // Wi-Fi Status Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "WLAN & Netzwerk",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        TextButton(
-                            onClick = { WifiScanner.startScan(context) },
-                            enabled = !isScanningWifi
-                        ) {
-                            Text(if (isScanningWifi) "Scannt..." else "🔄 Scan")
-                        }
-                    }
-
-                    val targetSsid = displayDevice.wifiSsid
-                    val scanMatch = scanResults.firstOrNull { it.ssid == targetSsid }
-
-                    DashboardInfoRow(label = "Ziel-SSID", value = if (targetSsid.isNotBlank()) targetSsid else "Keine konfiguriert")
-                    
-                    if (scanMatch != null) {
-                        DashboardInfoRow(
-                            label = "Signal / Band",
-                            value = "${scanMatch.rssi} dBm (${scanMatch.signalPercentage}%) • ${scanMatch.band}"
-                        )
-                        DashboardInfoRow(label = "Sicherheit", value = scanMatch.security)
-                    } else if (targetSsid.isNotBlank()) {
-                        DashboardInfoRow(
-                            label = "WLAN-Status",
-                            value = "⚠️ SSID nicht in Reichweite gefunden"
-                        )
-                    }
-
-                    DashboardInfoRow(
-                        label = "RTMP Ziel",
-                        value = if (displayDevice.rtmpUrl.isNotBlank()) displayDevice.rtmpUrl else "Keine Ziel-URL hinterlegt"
+                items(activeDevices, key = { it.id }) { device ->
+                    ActiveCameraCard(
+                        device = device,
+                        now = now,
+                        scanResults = scanResults,
+                        onStop = { DjiModel.stopStreaming(device) }
                     )
                 }
             }
 
-            // Last Error Banner (if present)
-            displayDevice.lastError?.let { err ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text(
-                            "Letzte Meldung:",
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            err,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                        displayDevice.lastErrorTimestamp?.let { ts ->
-                            val time = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(ts))
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                "Zeitstempel: $time",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.7f)
-                            )
-                        }
-                    }
+            // Section 2: STANDBY / INACTIVE CAMERAS
+            if (idleDevices.isNotEmpty()) {
+                item {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        if (activeDevices.isEmpty()) "ALLE KAMERAS (STANDBY)" else "INAKTIVE KAMERAS (${idleDevices.size})",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                items(idleDevices, key = { it.id }) { device ->
+                    IdleCameraCard(
+                        device = device,
+                        scanResults = scanResults,
+                        onStart = { DjiModel.startStreaming(context, device) }
+                    )
                 }
             }
         }
@@ -354,22 +151,251 @@ fun DashboardScreen(
 }
 
 @Composable
-private fun DashboardInfoRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+private fun ActiveCameraCard(
+    device: SettingsDjiDevice,
+    now: Long,
+    scanResults: List<WifiScanItem>,
+    onStop: () -> Unit
+) {
+    val isStreaming = device.state == SettingsDjiDeviceState.STREAMING
+    val isReconnecting = device.state == SettingsDjiDeviceState.RECONNECTING
+
+    val cardBorderColor by animateColorAsState(
+        targetValue = when {
+            isStreaming -> Color(0xFF2E7D32)
+            isReconnecting -> Color(0xFFE65100)
+            else -> MaterialTheme.colorScheme.primary
+        },
+        label = "borderColor"
+    )
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(2.dp, cardBorderColor, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Header Row: Camera Name + Live Tag + Battery
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f, fill = false)) {
+                    val displayName = device.customCameraName?.takeIf { it.isNotBlank() } ?: device.name
+                    Text(
+                        text = "📷 $displayName",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        "(${device.model})",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    device.batteryPercentage?.let { batt ->
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = if (batt <= 20) Color(0xFFD32F2F) else Color(0xFF2E7D32)
+                        ) {
+                            Text(
+                                "🔋 $batt%",
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = if (isStreaming) Color(0xFFD32F2F) else Color(0xFFE65100)
+                    ) {
+                        Text(
+                            text = if (isStreaming) "● LIVE" else "RECONNECT",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            color = Color.White,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // State & Stopwatch
+            val statusLabel = when (device.state) {
+                SettingsDjiDeviceState.DISCOVERING -> "Sucht DJI Kamera..."
+                SettingsDjiDeviceState.CONNECTING -> "Verbindet Bluetooth..."
+                SettingsDjiDeviceState.PAIRING -> "Bluetooth-Kopplung..."
+                SettingsDjiDeviceState.PREPARING_STREAM -> "Initialisiert Stream..."
+                SettingsDjiDeviceState.SETTING_UP_WIFI -> "WLAN wird aufgebaut..."
+                SettingsDjiDeviceState.CONFIGURING -> "Kamera-Einstellungen..."
+                SettingsDjiDeviceState.STARTING_STREAM -> "Startet RTMP..."
+                SettingsDjiDeviceState.STREAMING -> "Live Stream aktiv"
+                SettingsDjiDeviceState.RECONNECTING -> "Signal-Verlust! Reconnect #${device.reconnectAttempt}..."
+                SettingsDjiDeviceState.STOPPING_STREAM -> "Stream wird beendet..."
+                else -> "In Bearbeitung..."
+            }
+
+            val stopwatch = device.streamingStartedAt?.let { start ->
+                val totalSec = ((now - start).coerceAtLeast(0)) / 1000
+                val h = totalSec / 3600
+                val m = (totalSec % 3600) / 60
+                val s = totalSec % 60
+                if (h > 0) String.format(Locale.getDefault(), "%02d:%02d:%02d", h, m, s)
+                else String.format(Locale.getDefault(), "%02d:%02d", m, s)
+            } ?: "--:--"
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        statusLabel,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isStreaming) Color(0xFF2E7D32) else Color(0xFFE65100)
+                    )
+                    Text(
+                        "${device.resolution} @ ${device.fps}fps • ${device.bitrate / 1_000_000} Mbps",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("LAUFZEIT", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        stopwatch,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Wi-Fi details for this camera
+            val wifiItem = scanResults.firstOrNull { it.ssid == device.wifiSsid }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        "WLAN: ${device.wifiSsid.ifBlank { "Kein WLAN hinterlegt" }}",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                    if (wifiItem != null) {
+                        Text(
+                            "${wifiItem.band} • ${wifiItem.rssi} dBm (${wifiItem.signalPercentage}%)",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else if (device.wifiSsid.isNotBlank()) {
+                        Text(
+                            "⚠️ Nicht in Reichweite",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFFD32F2F)
+                        )
+                    }
+                }
+
+                Button(
+                    onClick = onStop,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                ) {
+                    Text("■ STOPP", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun IdleCameraCard(
+    device: SettingsDjiDevice,
+    scanResults: List<WifiScanItem>,
+    onStart: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    val displayName = device.customCameraName?.takeIf { it.isNotBlank() } ?: device.name
+                    Text(
+                        text = "📷 $displayName",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Profil: ${device.name} • ${device.model}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Button(
+                    onClick = onStart,
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text("▶ Start", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // WLAN & RTMP Info
+            val wifiItem = scanResults.firstOrNull { it.ssid == device.wifiSsid }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (device.wifiSsid.isNotBlank()) "WLAN: ${device.wifiSsid}" else "Kein WLAN hinterlegt",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (wifiItem != null) {
+                    Text(
+                        "Empfang: ${wifiItem.signalPercentage}% (${wifiItem.band})",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFF2E7D32),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
     }
 }

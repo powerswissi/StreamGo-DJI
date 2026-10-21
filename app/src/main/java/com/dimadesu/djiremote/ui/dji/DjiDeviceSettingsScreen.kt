@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.sp
 import com.dimadesu.djiremote.dji.*
 import com.dimadesu.djiremote.preset.ConnectionPreset
 import com.dimadesu.djiremote.preset.PresetRepository
+import com.dimadesu.djiremote.settings.AppSettingsRepository
+import android.widget.Toast
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,6 +63,13 @@ fun DjiDeviceSettingsScreen(
     // Presets observation & state
     val presets by PresetRepository.presets.collectAsState()
     var expandedPresetDropdown by remember { mutableStateOf(false) }
+
+    // Own Hotspot observation & dialog state
+    val appSettings by AppSettingsRepository.settings.collectAsState()
+    var showOwnHotspotDialog by remember { mutableStateOf(false) }
+    var hotspotDialogSsid by remember(appSettings.ownHotspotSsid) { mutableStateOf(appSettings.ownHotspotSsid) }
+    var hotspotDialogPassword by remember(appSettings.ownHotspotPassword) { mutableStateOf(appSettings.ownHotspotPassword) }
+    var isHotspotDialogPwdVisible by remember { mutableStateOf(false) }
 
     // WiFi scanner observation
     val wifiScanResults by WifiScanner.scanResults.collectAsState()
@@ -134,6 +143,76 @@ fun DjiDeviceSettingsScreen(
                 )
             )
         }
+    }
+
+    if (showOwnHotspotDialog) {
+        AlertDialog(
+            onDismissRequest = { showOwnHotspotDialog = false },
+            title = { Text("📱 Eigener Hotspot einrichten", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        "Da Android den eigenen Handy-Hotspot nicht im WLAN-Scan anzeigt, kannst du ihn hier einmalig hinterlegen und jederzeit mit 1 Klick auswählen.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = hotspotDialogSsid,
+                        onValueChange = { hotspotDialogSsid = it },
+                        label = { Text("Hotspot Name (SSID)") },
+                        placeholder = { Text("z. B. iPhone / Galaxy Hotspot") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = hotspotDialogPassword,
+                        onValueChange = { hotspotDialogPassword = it },
+                        label = { Text("Hotspot Passwort") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        visualTransformation = if (isHotspotDialogPwdVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { isHotspotDialogPwdVisible = !isHotspotDialogPwdVisible }) {
+                                Icon(
+                                    imageVector = if (isHotspotDialogPwdVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                    contentDescription = null
+                                )
+                            }
+                        }
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val trimmedSsid = hotspotDialogSsid.trim()
+                        if (trimmedSsid.isNotBlank()) {
+                            AppSettingsRepository.updateSettings(
+                                appSettings.copy(
+                                    ownHotspotSsid = trimmedSsid,
+                                    ownHotspotPassword = hotspotDialogPassword
+                                )
+                            )
+                            ssid = trimmedSsid
+                            password = hotspotDialogPassword
+                            liveDevice.wifiSsid = ssid
+                            liveDevice.wifiPassword = password
+                            DjiRepository.updateDevice(liveDevice)
+                            showOwnHotspotDialog = false
+                            Toast.makeText(context, "Eigener Hotspot gespeichert & ausgewählt!", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    enabled = hotspotDialogSsid.isNotBlank()
+                ) {
+                    Text("Speichern & Auswählen")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showOwnHotspotDialog = false }) {
+                    Text("Abbrechen")
+                }
+            }
+        )
     }
 
     Column(
@@ -285,73 +364,185 @@ fun DjiDeviceSettingsScreen(
             Spacer(modifier = Modifier.height(4.dp))
         }
 
-        // Dropdown / Selection for discovered WiFi networks
-        if (wifiScanResults.isNotEmpty()) {
-            ExposedDropdownMenuBox(
-                expanded = expandedWifiDropdown,
-                onExpandedChange = { if (!liveDevice.isStarted) expandedWifiDropdown = !expandedWifiDropdown }
+        // Quick selection for Own Hotspot
+        val isOwnHotspotConfigured = appSettings.ownHotspotSsid.isNotBlank()
+        val isOwnHotspotActive = isOwnHotspotConfigured && ssid == appSettings.ownHotspotSsid
+        OutlinedCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(enabled = !liveDevice.isStarted) {
+                    if (isOwnHotspotConfigured) {
+                        ssid = appSettings.ownHotspotSsid
+                        if (appSettings.ownHotspotPassword.isNotEmpty()) {
+                            password = appSettings.ownHotspotPassword
+                        }
+                        liveDevice.wifiSsid = ssid
+                        liveDevice.wifiPassword = password
+                        DjiRepository.updateDevice(liveDevice)
+                        Toast.makeText(context, "Eigener Hotspot '${appSettings.ownHotspotSsid}' ausgewählt!", Toast.LENGTH_SHORT).show()
+                    } else {
+                        hotspotDialogSsid = ssid
+                        hotspotDialogPassword = password
+                        showOwnHotspotDialog = true
+                    }
+                },
+            shape = RoundedCornerShape(8.dp),
+            border = BorderStroke(
+                width = if (isOwnHotspotActive) 2.dp else 1.dp,
+                color = if (isOwnHotspotActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+            ),
+            colors = CardDefaults.outlinedCardColors(
+                containerColor = if (isOwnHotspotActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f) else Color.Transparent
+            )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedCard(
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (isOwnHotspotConfigured) {
+                            "📱 Eigener Hotspot: ${appSettings.ownHotspotSsid}"
+                        } else {
+                            "📱 Eigener Hotspot auswählen / einrichten"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isOwnHotspotActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = if (isOwnHotspotConfigured) {
+                            if (isOwnHotspotActive) "✓ Ausgewählt • Tippen zum Übernehmen" else "Tippen um eigenen Handy-Hotspot zu nutzen"
+                        } else {
+                            "Einmalig Name & Passwort speichern (wird von Android nicht gescannt)"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                TextButton(
+                    onClick = {
+                        hotspotDialogSsid = appSettings.ownHotspotSsid.ifBlank { ssid }
+                        hotspotDialogPassword = appSettings.ownHotspotPassword.ifBlank { password }
+                        showOwnHotspotDialog = true
+                    },
+                    enabled = !liveDevice.isStarted,
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                ) {
+                    Text(if (isOwnHotspotConfigured) "Ändern ✎" else "Einrichten", fontSize = 12.sp)
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Dropdown / Selection for discovered WiFi networks
+        ExposedDropdownMenuBox(
+            expanded = expandedWifiDropdown,
+            onExpandedChange = { if (!liveDevice.isStarted) expandedWifiDropdown = !expandedWifiDropdown }
+        ) {
+            OutlinedCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = !liveDevice.isStarted),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = !liveDevice.isStarted),
-                    shape = RoundedCornerShape(8.dp)
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
+                    Column {
+                        Text(
+                            text = "WLAN / Hotspot auswählen (${wifiScanResults.size} im Scan)",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = "Gescannte Netzwerke oder eigenen Hotspot wählen",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedWifiDropdown)
+                }
+            }
+
+            ExposedDropdownMenu(
+                expanded = expandedWifiDropdown,
+                onDismissRequest = { expandedWifiDropdown = false }
+            ) {
+                // Always show "Eigener Hotspot" as top option in the dropdown
+                DropdownMenuItem(
+                    text = {
+                        Column(modifier = Modifier.padding(vertical = 4.dp)) {
                             Text(
-                                text = "Gefundene WLANs auswählen (${wifiScanResults.size})",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold
+                                text = if (isOwnHotspotConfigured) "📱 Eigener Hotspot (${appSettings.ownHotspotSsid})" else "📱 Eigener Hotspot (Einrichten...)",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.primary
                             )
                             Text(
-                                text = "Tippen zum Auswählen eines gescannten Netzwerks",
+                                text = if (isOwnHotspotConfigured) "Eigenen Smartphone-Hotspot verwenden" else "Hotspot-Zugangsdaten hinterlegen",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedWifiDropdown)
+                    },
+                    onClick = {
+                        expandedWifiDropdown = false
+                        if (isOwnHotspotConfigured) {
+                            ssid = appSettings.ownHotspotSsid
+                            if (appSettings.ownHotspotPassword.isNotEmpty()) {
+                                password = appSettings.ownHotspotPassword
+                            }
+                            liveDevice.wifiSsid = ssid
+                            liveDevice.wifiPassword = password
+                            DjiRepository.updateDevice(liveDevice)
+                        } else {
+                            hotspotDialogSsid = ssid
+                            hotspotDialogPassword = password
+                            showOwnHotspotDialog = true
+                        }
                     }
+                )
+
+                if (wifiScanResults.isNotEmpty()) {
+                    HorizontalDivider()
                 }
 
-                ExposedDropdownMenu(
-                    expanded = expandedWifiDropdown,
-                    onDismissRequest = { expandedWifiDropdown = false }
-                ) {
-                    wifiScanResults.forEach { item ->
-                        DropdownMenuItem(
-                            text = {
-                                Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(item.ssid, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                        Text("${item.rssi} dBm", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
-                                    }
-                                    Text(
-                                        text = "Signal: ${item.signalPercentage}% (${item.level}/4) • ${item.band} • ${item.security}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                wifiScanResults.forEach { item ->
+                    DropdownMenuItem(
+                        text = {
+                            Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(item.ssid, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                    Text("${item.rssi} dBm", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
                                 }
-                            },
-                            onClick = {
-                                ssid = item.ssid
-                                expandedWifiDropdown = false
+                                Text(
+                                    text = "Signal: ${item.signalPercentage}% (${item.level}/4) • ${item.band} • ${item.security}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
-                        )
-                    }
+                        },
+                        onClick = {
+                            ssid = item.ssid
+                            expandedWifiDropdown = false
+                        }
+                    )
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
         }
+        Spacer(modifier = Modifier.height(8.dp))
 
         TextField(
             value = ssid,
@@ -365,7 +556,14 @@ fun DjiDeviceSettingsScreen(
         if (ssid.isNotBlank()) {
             Spacer(modifier = Modifier.height(4.dp))
             val isFound = WifiScanner.isSsidFound(ssid)
-            if (isFound) {
+            if (isOwnHotspotActive) {
+                Text(
+                    text = "✓ 📱 Eigener Hotspot aktiv ausgewählt (${appSettings.ownHotspotSsid})",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF2E7D32),
+                    fontWeight = FontWeight.Medium
+                )
+            } else if (isFound) {
                 val scanItem = WifiScanner.getScanItem(ssid)
                 Text(
                     text = "✓ Im WiFi-Scan gefunden (Signal: ${scanItem?.rssi} dBm, ${scanItem?.band}, ${scanItem?.security})",

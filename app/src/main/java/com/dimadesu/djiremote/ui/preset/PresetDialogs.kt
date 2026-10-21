@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.sp
 import com.dimadesu.djiremote.dji.WifiScanner
 import com.dimadesu.djiremote.preset.ConnectionPreset
 import com.dimadesu.djiremote.preset.PresetRepository
+import com.dimadesu.djiremote.settings.AppSettingsRepository
 
 @Composable
 fun SavePresetDialog(
@@ -49,6 +50,7 @@ fun SavePresetDialog(
     var expandedWifiDropdown by remember { mutableStateOf(false) }
     val wifiScanResults by WifiScanner.scanResults.collectAsState()
     val isWifiScanning by WifiScanner.isScanning.collectAsState()
+    val appSettings by AppSettingsRepository.settings.collectAsState()
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -81,12 +83,30 @@ fun SavePresetDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("WLAN-Name (SSID)", style = MaterialTheme.typography.labelMedium)
-                        if (wifiScanResults.isNotEmpty()) {
-                            TextButton(
-                                onClick = { expandedWifiDropdown = !expandedWifiDropdown },
-                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
-                            ) {
-                                Text("Aus Scan wählen (${wifiScanResults.size})", fontSize = 11.sp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            if (appSettings.ownHotspotSsid.isNotBlank()) {
+                                TextButton(
+                                    onClick = {
+                                        ssid = appSettings.ownHotspotSsid
+                                        if (appSettings.ownHotspotPassword.isNotEmpty()) {
+                                            password = appSettings.ownHotspotPassword
+                                        }
+                                        if (name.isBlank()) {
+                                            name = "Eigener Hotspot"
+                                        }
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                                ) {
+                                    Text("📱 Eigener Hotspot", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            if (wifiScanResults.isNotEmpty()) {
+                                TextButton(
+                                    onClick = { expandedWifiDropdown = !expandedWifiDropdown },
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                                ) {
+                                    Text("Aus Scan (${wifiScanResults.size})", fontSize = 11.sp)
+                                }
                             }
                         }
                     }
@@ -198,6 +218,7 @@ fun EditPresetDialog(
 
     var expandedWifiDropdown by remember { mutableStateOf(false) }
     val wifiScanResults by WifiScanner.scanResults.collectAsState()
+    val appSettings by AppSettingsRepository.settings.collectAsState()
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -222,12 +243,27 @@ fun EditPresetDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("WLAN-Name (SSID)", style = MaterialTheme.typography.labelMedium)
-                        if (wifiScanResults.isNotEmpty()) {
-                            TextButton(
-                                onClick = { expandedWifiDropdown = !expandedWifiDropdown },
-                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
-                            ) {
-                                Text("Aus Scan wählen", fontSize = 11.sp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            if (appSettings.ownHotspotSsid.isNotBlank()) {
+                                TextButton(
+                                    onClick = {
+                                        ssid = appSettings.ownHotspotSsid
+                                        if (appSettings.ownHotspotPassword.isNotEmpty()) {
+                                            password = appSettings.ownHotspotPassword
+                                        }
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                                ) {
+                                    Text("📱 Eigener Hotspot", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            if (wifiScanResults.isNotEmpty()) {
+                                TextButton(
+                                    onClick = { expandedWifiDropdown = !expandedWifiDropdown },
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                                ) {
+                                    Text("Aus Scan wählen", fontSize = 11.sp)
+                                }
                             }
                         }
                     }

@@ -29,7 +29,10 @@ data class AppSettingsState(
     val batteryWarningVibration: Boolean = true,
     // Auto-Reconnect
     val autoReconnectEnabled: Boolean = true,
-    val maxReconnectAttempts: Int = 15 // 3 - 30 Versuche
+    val maxReconnectAttempts: Int = 15, // 3 - 30 Versuche
+    // Eigener Hotspot
+    val ownHotspotSsid: String = "",
+    val ownHotspotPassword: String = ""
 )
 
 object AppSettingsRepository {
@@ -60,7 +63,9 @@ object AppSettingsRepository {
             batteryWarningSound = sp.getBoolean("battery_warning_sound", true),
             batteryWarningVibration = sp.getBoolean("battery_warning_vibration", true),
             autoReconnectEnabled = sp.getBoolean("auto_reconnect_enabled", true),
-            maxReconnectAttempts = sp.getInt("max_reconnect_attempts", 15)
+            maxReconnectAttempts = sp.getInt("max_reconnect_attempts", 15),
+            ownHotspotSsid = sp.getString("own_hotspot_ssid", "") ?: "",
+            ownHotspotPassword = sp.getString("own_hotspot_password", "") ?: ""
         )
 
         try {
@@ -83,6 +88,8 @@ object AppSettingsRepository {
             putBoolean("battery_warning_vibration", newSettings.batteryWarningVibration)
             putBoolean("auto_reconnect_enabled", newSettings.autoReconnectEnabled)
             putInt("max_reconnect_attempts", newSettings.maxReconnectAttempts)
+            putString("own_hotspot_ssid", newSettings.ownHotspotSsid)
+            putString("own_hotspot_password", newSettings.ownHotspotPassword)
             apply()
         }
     }

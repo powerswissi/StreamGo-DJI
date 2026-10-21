@@ -34,12 +34,6 @@
             android:padding="4dp" />
     </LinearLayout>
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="#33FFFFFF"
-        android:layout_marginBottom="8dp" />
-
     <!-- Container where dynamic profiles will be placed -->
     <LinearLayout
         android:id="@+id/widget_profiles_container"

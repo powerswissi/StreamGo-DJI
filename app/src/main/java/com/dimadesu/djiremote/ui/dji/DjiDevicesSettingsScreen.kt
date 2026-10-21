@@ -80,7 +80,7 @@ fun DjiDevicesSettingsScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f).padding(end = 6.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         "StreamGo DJI",
@@ -104,20 +104,16 @@ fun DjiDevicesSettingsScreen(
                 }
                 val activeCount = devices.count { it.isStarted }
                 Text(
-                    text = if (activeCount > 0) "$activeCount aktive Verbindung(en) • ${devices.size} Profil(e)" else "${devices.size} Profil(e) gespeichert",
+                    text = if (activeCount > 0) "$activeCount aktiv • ${devices.size} Profil(e)" else "${devices.size} Profil(e) gespeichert",
                     style = MaterialTheme.typography.bodySmall,
                     color = if (activeCount > 0) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = if (activeCount > 0) FontWeight.Bold else FontWeight.Normal
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                FilledTonalButton(
-                    onClick = onOpenPresets,
-                    shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
-                ) {
-                    Text("⚡ Vorlagen", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onOpenPresets) {
+                    Text("⚡", fontSize = 20.sp)
                 }
                 IconButton(onClick = onOpenSettings) {
                     Text("⚙️", fontSize = 20.sp)
@@ -127,9 +123,10 @@ fun DjiDevicesSettingsScreen(
                         val d = SettingsDjiDevice(name = "Profil ${devices.size + 1}")
                         DjiRepository.addDevice(d)
                     },
-                    shape = RoundedCornerShape(10.dp)
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                 ) {
-                    Text("+ Neu")
+                    Text("+ Neu", fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -145,12 +142,16 @@ fun DjiDevicesSettingsScreen(
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Tippe auf '+ Neu', um ein Kamera-Profil anzulegen",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(
+                    onClick = {
+                        val d = SettingsDjiDevice(name = "Profil 1")
+                        DjiRepository.addDevice(d)
+                    },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("➕ Erstes Profil anlegen", fontWeight = FontWeight.Bold)
+                }
             }
         } else {
             LazyColumn(modifier = Modifier.weight(1f)) {
@@ -439,6 +440,22 @@ fun DjiDevicesSettingsScreen(
                             }
                         }
                     }
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    OutlinedButton(
+                        onClick = {
+                            val d = SettingsDjiDevice(name = "Profil ${devices.size + 1}")
+                            DjiRepository.addDevice(d)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(vertical = 12.dp)
+                    ) {
+                        Text("➕ Neues Kamera-Profil hinzufügen", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
             }
         }

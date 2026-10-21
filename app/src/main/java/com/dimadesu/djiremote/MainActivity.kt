@@ -11,6 +11,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import android.view.WindowManager
+import androidx.compose.foundation.isSystemInDarkTheme
+import com.dimadesu.djiremote.settings.AppSettingsRepository
+import com.dimadesu.djiremote.settings.AppThemeMode
 import com.dimadesu.djiremote.dji.DjiRepository
 import com.dimadesu.djiremote.dji.SettingsDjiDevice
 import com.dimadesu.djiremote.ui.dji.DjiBleScannerScreen
@@ -25,10 +29,47 @@ class MainActivity : ComponentActivity() {
 
         // Initialize repository with context
         DjiRepository.initialize(this)
+        AppSettingsRepository.initialize(this)
 
         enableEdgeToEdge()
         setContent {
-            DJIRemoteTheme {
+            val appSettings by AppSettingsRepository.settings.collectAsState()
+
+            // Keep screen on
+            DisposableEffect(appSettings.keepScreenOn) {
+                if (appSettings.keepScreenOn) {
+                    window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                } else {
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                }
+                onDispose {
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                }
+            }
+
+            // Outdoor max brightness
+            DisposableEffect(appSettings.outdoorMaxBrightness) {
+                val layoutParams = window.attributes
+                if (appSettings.outdoorMaxBrightness) {
+                    layoutParams.screenBrightness = 1.0f
+                } else {
+                    layoutParams.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+                }
+                window.attributes = layoutParams
+                onDispose {
+                    val lp = window.attributes
+                    lp.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+                    window.attributes = lp
+                }
+            }
+
+            val darkTheme = when (appSettings.themeMode) {
+                AppThemeMode.DARK -> true
+                AppThemeMode.LIGHT -> false
+                AppThemeMode.SYSTEM -> isSystemInDarkTheme()
+            }
+
+            DJIRemoteTheme(darkTheme = darkTheme) {
                 var screen by remember { mutableStateOf("devices") } // "devices", "device", "device-scanner", "settings"
                 var selectedDevice by remember { mutableStateOf<SettingsDjiDevice?>(null) }
 

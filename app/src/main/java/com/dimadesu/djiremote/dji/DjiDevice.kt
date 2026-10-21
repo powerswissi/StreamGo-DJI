@@ -118,6 +118,8 @@ class DjiDevice(private val context: Context) {
     private var batteryPercentage: Int? = null
     private var cameraTemperature: Int? = null
     private var liveBitrateKbps: Int? = null
+    private var previousBatteryPercentage: Int? = null
+    private var lastBatteryAlertAt: Long = 0L
 
     private var userInitiatedStop: Boolean = false
     private var reconnectAttempts: Int = 0
@@ -344,8 +346,17 @@ class DjiDevice(private val context: Context) {
     }
 
     private fun scheduleReconnect() {
-        if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-            djiLog("Reconnect-Versuche erschöpft ($reconnectAttempts/$MAX_RECONNECT_ATTEMPTS). Gebe auf.")
+        val appSettings = com.dimadesu.djiremote.settings.AppSettingsRepository.settings.value
+        if (!appSettings.autoReconnectEnabled) {
+            djiLog("Auto-Reconnect in den App-Einstellungen deaktiviert. Gehe in IDLE.")
+            lastError = "Verbindung unterbrochen (Auto-Reconnect deaktiviert)"
+            setState(DjiDeviceState.IDLE, error = lastError)
+            return
+        }
+
+        val maxAttempts = appSettings.maxReconnectAttempts
+        if (reconnectAttempts >= maxAttempts) {
+            djiLog("Reconnect-Versuche erschöpft ($reconnectAttempts/$maxAttempts). Gebe auf.")
             lastError = "Verbindung zur Kamera nach $reconnectAttempts Versuchen nicht möglich"
             setState(DjiDeviceState.IDLE, error = lastError)
             return
@@ -1169,6 +1180,17 @@ class DjiDevice(private val context: Context) {
                     val battery = message.payload[20].toInt() and 0xFF
                     batteryPercentage = battery
                     djiLog("Batteriestatus empfangen: $battery%")
+
+                    // Akku-Alarm prüfen
+                    val appSettings = com.dimadesu.djiremote.settings.AppSettingsRepository.settings.value
+                    if (appSettings.batteryWarningEnabled && battery <= appSettings.batteryWarningThreshold) {
+                        val now = SystemClock.elapsedRealtime()
+                        // Nicht öfter als alle 60s warnen
+                        if (now - lastBatteryAlertAt > 60_000L) {
+                            lastBatteryAlertAt = now
+                            com.dimadesu.djiremote.settings.AppSettingsRepository.triggerBatteryAlarm(context)
+                        }
+                    }
                 }
                 if (message.payload.size >= 23) {
                     // Byte 21 und 22: Temperatur in 0.1°C (z. B. 0x0186 = 390 -> 39°C)

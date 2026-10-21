@@ -43,6 +43,11 @@ object DjiRepository {
         saveToStorage()
     }
 
+    fun replaceAllDevices(newDevices: List<SettingsDjiDevice>) {
+        _devices.value = newDevices
+        saveToStorage()
+    }
+
     fun removeDevice(id: UUID) {
         _devices.value = _devices.value.filterNot { it.id == id }
         saveToStorage()

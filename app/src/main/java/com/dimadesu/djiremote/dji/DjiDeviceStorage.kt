@@ -11,6 +11,18 @@ object DjiDeviceStorage {
     
     private val gson = Gson()
     
+    fun exportToJson(devices: List<SettingsDjiDevice>): String {
+        return gson.toJson(devices)
+    }
+
+    fun importFromJson(json: String): List<SettingsDjiDevice>? {
+        return try {
+            val type = object : TypeToken<List<SettingsDjiDevice>>() {}.type
+            gson.fromJson<List<SettingsDjiDevice>>(json, type)
+        } catch (e: Exception) {
+            null
+        }
+    }
     fun saveDevices(context: Context, devices: List<SettingsDjiDevice>) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val json = gson.toJson(devices)

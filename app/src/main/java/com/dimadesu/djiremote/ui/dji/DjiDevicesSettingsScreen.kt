@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dimadesu.djiremote.dji.*
@@ -222,16 +223,6 @@ fun DjiDevicesSettingsScreen(
                                             }
                                         }
                                     }
-
-                                    val camName = device.customCameraName?.takeIf { it.isNotBlank() }
-                                        ?: device.bluetoothPeripheralName
-                                        ?: "Kamera nicht gekoppelt"
-                                    Text(
-                                        text = "📷 $camName (${device.model})",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = if (!device.customCameraName.isNullOrBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
                                 }
 
                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -256,8 +247,8 @@ fun DjiDevicesSettingsScreen(
                                     ) {
                                         Text(
                                             text = when {
-                                                isStreaming -> "⏹ Stop"
-                                                isStarted -> "⏳ Läuft..."
+                                                isStreaming -> "■ Stop"
+                                                isStarted -> "Läuft…"
                                                 else -> "▶ Start"
                                             },
                                             fontWeight = FontWeight.Bold,
@@ -280,6 +271,19 @@ fun DjiDevicesSettingsScreen(
                                     }
                                 }
                             }
+
+                            // Kamera-Zeile: volle Breite, einzeilig
+                            val camName = device.customCameraName?.takeIf { it.isNotBlank() }
+                                ?: device.bluetoothPeripheralName
+                                ?: "Kamera nicht gekoppelt"
+                            Text(
+                                text = "📷 $camName · ${device.model.name.replace('_', ' ')}",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                color = if (!device.customCameraName.isNullOrBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
 
                             // Active Telemetry & Status Row
                             if (isStarted) {
@@ -333,52 +337,58 @@ fun DjiDevicesSettingsScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Column {
-                                        Text(
-                                            text = statusLabel,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = when {
-                                                isStreaming -> Color(0xFF2E7D32)
-                                                isReconnecting -> Color(0xFFE65100)
-                                                device.state == SettingsDjiDeviceState.WIFI_SETUP_FAILED -> MaterialTheme.colorScheme.error
-                                                else -> MaterialTheme.colorScheme.primary
-                                            }
-                                        )
-
-                                        // Temperatur (Akku steht bereits im Header)
-                                        if (device.cameraTemperature != null) {
-                                            Text(
-                                                text = "🌡️ ${device.cameraTemperature}°C",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = if (device.cameraTemperature!! >= 60) Color(0xFFD32F2F) else MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
+                                    Text(
+                                        text = statusLabel,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = when {
+                                            isStreaming -> Color(0xFF2E7D32)
+                                            isReconnecting -> Color(0xFFE65100)
+                                            device.state == SettingsDjiDeviceState.WIFI_SETUP_FAILED -> MaterialTheme.colorScheme.error
+                                            else -> MaterialTheme.colorScheme.primary
                                         }
+                                    )
+                                    Text(
+                                        text = stopwatch,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 24.sp,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+
+                                // Kennzahlen gruppiert: Upload | Datenmenge | Temperatur
+                                if (isStreaming) {
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
                                         if (rateText != null) {
                                             Text(
                                                 text = rateText,
-                                                style = MaterialTheme.typography.labelMedium,
+                                                style = MaterialTheme.typography.bodySmall,
                                                 fontWeight = FontWeight.Bold,
                                                 color = Color(0xFF2E7D32)
                                             )
                                         }
-                                    }
-
-                                    Column(horizontalAlignment = Alignment.End) {
-                                        Text(
-                                            text = if (streamedMb != null) "STREAM-ZEIT • $streamedMb" else "STREAM-ZEIT",
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        Text(
-                                            text = stopwatch,
-                                            fontFamily = FontFamily.Monospace,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 18.sp,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
+                                        if (streamedMb != null) {
+                                            Text(
+                                                text = "📦 $streamedMb",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        if (device.cameraTemperature != null) {
+                                            Text(
+                                                text = "🌡️ ${device.cameraTemperature}°C",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = if (device.cameraTemperature!! >= 60) Color(0xFFD32F2F) else MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -394,26 +404,25 @@ fun DjiDevicesSettingsScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column {
-                                    Text(
-                                        text = if (device.wifiSsid.isNotBlank()) "📶 ${device.wifiSsid}" else "Kein WLAN hinterlegt",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    if (wifiItem != null) {
-                                        Text(
-                                            text = "${wifiItem.signalPercentage}% (${wifiItem.band})",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = Color(0xFF2E7D32)
-                                        )
-                                    }
-                                }
+                                Text(
+                                    text = buildString {
+                                        append(if (device.wifiSsid.isNotBlank()) "📶 ${device.wifiSsid}" else "Kein WLAN hinterlegt")
+                                        if (wifiItem != null) append(" · ${wifiItem.signalPercentage}% · ${wifiItem.band}")
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.weight(1f)
+                                )
+
+                                Spacer(modifier = Modifier.width(8.dp))
 
                                 Text(
-                                    text = "${device.resolution} • ${device.fps}fps • ${device.bitrate / 1_000_000}M",
+                                    text = "${device.resolution} · ${device.fps}fps · ${device.bitrate / 1_000_000}M",
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }

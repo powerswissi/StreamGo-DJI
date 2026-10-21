@@ -281,31 +281,37 @@ fun AppSettingsScreen(
         }
 
         // Section: Presets
-        SettingsCard(title = "⚡ VERBINDUNGS-VORLAGEN (PRESETS)") {
-            Text(
-                "Verwalte gespeicherte WLAN- und RTMP-Kombinationen, um sie schnell in jedem Kamera-Profil anzuwenden.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onOpenPresets() },
+            shape = RoundedCornerShape(14.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "${presets.size} Vorlage(n) hinterlegt",
-                    fontWeight = FontWeight.SemiBold,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Button(
-                    onClick = onOpenPresets,
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text("Vorlagen verwalten ➔")
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Text("⚡", fontSize = 18.sp)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "Verbindungs-Vorlagen (Presets)",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = "${presets.size} Vorlage(n) • WLAN, QR-Scan & RTMP",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
+                Text("➔", fontSize = 16.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             }
         }
 

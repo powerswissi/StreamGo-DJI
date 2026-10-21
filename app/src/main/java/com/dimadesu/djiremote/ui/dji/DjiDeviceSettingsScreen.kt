@@ -195,124 +195,88 @@ fun DjiDeviceSettingsScreen(
         HorizontalDivider()
         Spacer(modifier = Modifier.height(16.dp))
 
-        // --- Quick Preset Selection (Optional) ---
-        if (presets.isNotEmpty()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "⚡ Vorlage anwenden (Optional)",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                TextButton(
-                    onClick = onOpenPresets,
-                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
-                ) {
-                    Text("Vorlagen verwalten ➔", fontSize = 12.sp)
-                }
-            }
-
-            ExposedDropdownMenuBox(
-                expanded = expandedPresetDropdown,
-                onExpandedChange = { if (!liveDevice.isStarted) expandedPresetDropdown = !expandedPresetDropdown }
-            ) {
-                OutlinedCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = !liveDevice.isStarted),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(10.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Vorlage auswählen...",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedPresetDropdown)
-                    }
-                }
-
-                ExposedDropdownMenu(
-                    expanded = expandedPresetDropdown,
-                    onDismissRequest = { expandedPresetDropdown = false }
-                ) {
-                    presets.forEach { item ->
-                        DropdownMenuItem(
-                            text = {
-                                Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                                    Text(item.name, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                    Text(
-                                        text = "📶 WLAN: ${item.wifiSsid.ifEmpty { "–" }} • 🎥 RTMP: ${item.rtmpUrl.ifEmpty { "–" }}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            },
-                            onClick = {
-                                ssid = item.wifiSsid
-                                if (item.wifiPassword.isNotEmpty()) {
-                                    password = item.wifiPassword
-                                }
-                                if (item.rtmpUrl.isNotEmpty()) {
-                                    rtmpUrl = item.rtmpUrl
-                                }
-                                liveDevice.wifiSsid = ssid
-                                liveDevice.wifiPassword = password
-                                liveDevice.rtmpUrl = rtmpUrl
-                                DjiRepository.updateDevice(liveDevice)
-                                expandedPresetDropdown = false
-                            }
-                        )
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-        HorizontalDivider()
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // WiFi section with auto-scan and selection
+        // WiFi section with presets and scanner
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("WiFi", style = MaterialTheme.typography.titleMedium)
-            TextButton(
-                onClick = {
-                    if (hasWifiPermissions) {
-                        WifiScanner.startScan(context)
-                    } else {
-                        wifiPermissionsLauncher.launch(
-                            arrayOf(
-                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION,
-                                Manifest.permission.ACCESS_WIFI_STATE,
-                                Manifest.permission.CHANGE_WIFI_STATE
-                            )
-                        )
+
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                // Compact Preset Dropdown Button
+                if (presets.isNotEmpty()) {
+                    Box {
+                        FilledTonalButton(
+                            onClick = { if (!liveDevice.isStarted) expandedPresetDropdown = true },
+                            enabled = !liveDevice.isStarted,
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("⚡ Vorlage ▼", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        DropdownMenu(
+                            expanded = expandedPresetDropdown,
+                            onDismissRequest = { expandedPresetDropdown = false }
+                        ) {
+                            presets.forEach { item ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Column(modifier = Modifier.padding(vertical = 2.dp)) {
+                                            Text(item.name, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                            Text(
+                                                text = "📶 ${item.wifiSsid.ifEmpty { "–" }} • 🎥 ${item.rtmpUrl.ifEmpty { "–" }}",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        ssid = item.wifiSsid
+                                        if (item.wifiPassword.isNotEmpty()) {
+                                            password = item.wifiPassword
+                                        }
+                                        if (item.rtmpUrl.isNotEmpty()) {
+                                            rtmpUrl = item.rtmpUrl
+                                        }
+                                        liveDevice.wifiSsid = ssid
+                                        liveDevice.wifiPassword = password
+                                        liveDevice.rtmpUrl = rtmpUrl
+                                        DjiRepository.updateDevice(liveDevice)
+                                        expandedPresetDropdown = false
+                                    }
+                                )
+                            }
+                        }
                     }
-                },
-                enabled = !isWifiScanning && !liveDevice.isStarted
-            ) {
-                if (isWifiScanning) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Scanne...")
-                } else {
-                    Text("WLAN scannen ⟳")
+                }
+
+                TextButton(
+                    onClick = {
+                        if (hasWifiPermissions) {
+                            WifiScanner.startScan(context)
+                        } else {
+                            wifiPermissionsLauncher.launch(
+                                arrayOf(
+                                    Manifest.permission.ACCESS_FINE_LOCATION,
+                                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                                    Manifest.permission.ACCESS_WIFI_STATE,
+                                    Manifest.permission.CHANGE_WIFI_STATE
+                                )
+                            )
+                        }
+                    },
+                    enabled = !isWifiScanning && !liveDevice.isStarted,
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    if (isWifiScanning) {
+                        CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Scanne...", fontSize = 12.sp)
+                    } else {
+                        Text("Scannen ⟳", fontSize = 12.sp)
+                    }
                 }
             }
         }

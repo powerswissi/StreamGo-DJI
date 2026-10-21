@@ -160,50 +160,15 @@ fun DjiDevicesSettingsScreen(onOpenDevice: (SettingsDjiDevice) -> Unit) {
 
                                 Spacer(modifier = Modifier.width(8.dp))
 
-                                // 1-CLICK START / STOP BUTTON
-                                val isStarted = device.isStarted
-                                val isStreaming = device.state == SettingsDjiDeviceState.STREAMING
-
-                                Button(
-                                    onClick = {
-                                        if (!isStarted) {
-                                            DjiModel.startStreaming(context, device)
-                                        } else {
-                                            DjiModel.stopStreaming(device)
-                                        }
-                                    },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = when {
-                                            isStreaming -> Color(0xFFD32F2F) // Rot bei aktivem Stream
-                                            isStarted -> Color(0xFFFFA000) // Orange beim Verbinden/Vorbereiten
-                                            else -> MaterialTheme.colorScheme.primary
-                                        }
-                                    ),
-                                    shape = RoundedCornerShape(10.dp),
-                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
-                                ) {
-                                    Text(
-                                        text = when {
-                                            isStreaming -> "⏹ Stop"
-                                            isStarted -> "⏳ Läuft..."
-                                            else -> "▶ Start"
-                                        },
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.width(4.dp))
-
                                 // EINZELNER LÖSCHEN-BUTTON FÜR DIESES SPEZIFISCHE PROFIL
                                 IconButton(
                                     onClick = { profileToDelete = device },
-                                    enabled = !isStarted
+                                    enabled = !device.isStarted
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Delete,
                                         contentDescription = "Profil löschen",
-                                        tint = if (!isStarted) MaterialTheme.colorScheme.error.copy(alpha = 0.8f) else Color.Gray
+                                        tint = if (!device.isStarted) MaterialTheme.colorScheme.error.copy(alpha = 0.8f) else Color.Gray
                                     )
                                 }
                             }
@@ -212,76 +177,23 @@ fun DjiDevicesSettingsScreen(onOpenDevice: (SettingsDjiDevice) -> Unit) {
                             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                             Spacer(modifier = Modifier.height(10.dp))
 
-                            // Status & Detail Row
+                            // Kamera & Ziel-Infos anzeigen (WLAN / Auflösung)
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = "Status: ",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Text(
-                                        text = when (device.state) {
-                                            SettingsDjiDeviceState.IDLE -> "Bereit (Inaktiv)"
-                                            SettingsDjiDeviceState.DISCOVERING -> "Sucht Kamera..."
-                                            SettingsDjiDeviceState.CONNECTING -> "Verbindet BLE..."
-                                            SettingsDjiDeviceState.PAIRING -> "Kopplung..."
-                                            SettingsDjiDeviceState.STOPPING_STREAM -> "Stoppt..."
-                                            SettingsDjiDeviceState.PREPARING_STREAM -> "Bereitet vor..."
-                                            SettingsDjiDeviceState.SETTING_UP_WIFI -> "WLAN-Setup..."
-                                            SettingsDjiDeviceState.WIFI_SETUP_FAILED -> "WLAN fehlgeschlagen"
-                                            SettingsDjiDeviceState.CONFIGURING -> "Konfiguriert..."
-                                            SettingsDjiDeviceState.STARTING_STREAM -> "Startet Stream..."
-                                            SettingsDjiDeviceState.STREAMING -> "🔴 LIVE STREAM"
-                                            SettingsDjiDeviceState.RECONNECTING -> "Neu verbinden (Versuch ${device.reconnectAttempt})..."
-                                            else -> device.state.name
-                                        },
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = when (device.state) {
-                                            SettingsDjiDeviceState.STREAMING -> Color(0xFF2E7D32)
-                                            SettingsDjiDeviceState.WIFI_SETUP_FAILED -> MaterialTheme.colorScheme.error
-                                            SettingsDjiDeviceState.RECONNECTING -> Color(0xFFE65100)
-                                            SettingsDjiDeviceState.IDLE -> MaterialTheme.colorScheme.onSurfaceVariant
-                                            else -> MaterialTheme.colorScheme.primary
-                                        }
-                                    )
-                                }
-
-                                if (device.batteryPercentage != null) {
-                                    Text(
-                                        text = "🔋 ${device.batteryPercentage}%",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (device.batteryPercentage!! <= 20) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-                            }
-
-                            // Ziel-Infos anzeigen (WLAN / Auflösung)
-                            if (device.wifiSsid.isNotBlank() || device.rtmpUrl.isNotBlank()) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    if (device.wifiSsid.isNotBlank()) {
-                                        Text(
-                                            text = "📶 ${device.wifiSsid}",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    Text(
-                                        text = "${device.resolution} • ${device.bitrate / 1_000_000}M",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
+                                Text(
+                                    text = if (device.wifiSsid.isNotBlank()) "📶 ${device.wifiSsid}" else "Kein WLAN hinterlegt",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "${device.resolution} @ ${device.fps}fps • ${device.bitrate / 1_000_000} Mbps",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
 
                             // Show last error if present

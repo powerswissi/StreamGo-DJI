@@ -1207,25 +1207,26 @@ class DjiDevice(private val context: Context) {
             BROADCAST_STATUS_TYPE_1, BROADCAST_STATUS_TYPE_2 -> {
                 // In DJI broadcast telemetry (target 0x0802, type 0x03EE80 or 0x03EE40):
                 // payload[0] = stream state (0x02 = streaming, 0x03 = stopped/idle, 0x00 = initializing)
-                // payload[1] = stream flag (0x08 = live streaming active, 0x01/0x00 = idle/stopped)
+                // payload[1] = stream flag bitmask (Bit 0x08 = live streaming active, z. B. 0x08 oder 0x28)
                 if (message.payload.isNotEmpty()) {
                     val streamState = message.payload[0].toInt() and 0xFF
                     val streamFlag = if (message.payload.size >= 2) message.payload[1].toInt() and 0xFF else 0
-                    djiLog("Broadcast-Status Telemetrie: State=0x${streamState.toString(16)}, Flag=0x${streamFlag.toString(16)}")
+                    val isStreamActiveFlag = (streamFlag and 0x08) != 0 && streamState == 0x02
+                    djiLog("Broadcast-Status Telemetrie: State=0x${streamState.toString(16)}, Flag=0x${streamFlag.toString(16)} (isStreamActive=$isStreamActiveFlag)")
 
                     // payload[6..7] (little endian) schwankt um die eingestellte Bitrate in kbit/s
                     // (z. B. 0x2054 = 8276 bei 8 Mbit/s) -> tatsächlich von der Kamera gemeldete Encoder-Bitrate
-                    if (streamState == 0x02 && streamFlag == 0x08 && message.payload.size >= 8) {
+                    if (isStreamActiveFlag && message.payload.size >= 8) {
                         val kbps = ((message.payload[7].toInt() and 0xFF) shl 8) or (message.payload[6].toInt() and 0xFF)
                         if (kbps in 100..60000) {
                             liveBitrateKbps = kbps
                         }
                     }
 
-                    if (streamFlag == 0x08 && streamState == 0x02) {
+                    if (isStreamActiveFlag) {
                         seenActiveStreamInCurrentSession = true
                         startStreamingHeartbeatTimer() // Refresh watchdog timer while stream is active
-                    } else if (seenActiveStreamInCurrentSession && (streamFlag != 0x08 || streamState == 0x03)) {
+                    } else if (seenActiveStreamInCurrentSession && (!isStreamActiveFlag || streamState == 0x03)) {
                         djiLogInfo("DJI Broadcast meldet Stream-Ende (State=0x${streamState.toString(16)}, Flag=0x${streamFlag.toString(16)}). Beende Zustand.")
                         userInitiatedStop = true
                         cancelReconnect()

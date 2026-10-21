@@ -24,6 +24,14 @@ Die schnelle, zuverlässige Android-App zur Steuerung von DJI Action- und Pocket
 
 ---
 
+## Screenshots
+
+| Profile & Live-Status | Kamera & WLAN | Stream-Einstellungen |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/profiles.png" width="260"> | <img src="docs/screenshots/camera-wifi.png" width="260"> | <img src="docs/screenshots/stream-settings.png" width="260"> |
+
+---
+
 ## Credits & Danksagung
 Basierend auf Vorarbeiten von [dimadesu/dji-remote](https://github.com/dimadesu/dji-remote), [Moblin](https://github.com/eerimoq/Moblin) und dem reverse-engineerten DJI-Bluetooth-Protokoll von [Spillmaker](https://github.com/Spillmaker).
 

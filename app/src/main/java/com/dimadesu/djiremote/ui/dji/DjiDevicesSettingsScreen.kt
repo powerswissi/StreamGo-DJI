@@ -357,7 +357,7 @@ fun DjiDevicesSettingsScreen(
                                     )
                                 }
 
-                                // Kennzahlen gruppiert: Upload | Datenmenge | Temperatur
+                                // Kennzahlen gruppiert: Upload | Datenmenge
                                 if (isStreaming) {
                                     Spacer(modifier = Modifier.height(6.dp))
                                     Row(
@@ -379,14 +379,6 @@ fun DjiDevicesSettingsScreen(
                                                 style = MaterialTheme.typography.bodySmall,
                                                 fontWeight = FontWeight.SemiBold,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                        if (device.cameraTemperature != null) {
-                                            Text(
-                                                text = "🌡️ ${device.cameraTemperature}°C",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = if (device.cameraTemperature!! >= 60) Color(0xFFD32F2F) else MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                     }

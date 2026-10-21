@@ -23,7 +23,7 @@ Die schnelle, zuverlässige Android-App zur Steuerung von DJI Action- und Pocket
 - 📊 **Echtzeit-Telemetrie**:
   - Live-Encoder-Bitrate (Mbit/s)
   - Stream-Laufzeit (Stoppuhr) & geschätztes Datenvolumen (MB / GB)
-  - Live-Akkuanzeige & Kamera-Temperatur (°C)
+  - Live-Akkuanzeige (%)
   - WLAN-Signalstärke & Frequenzband (2.4 / 5 GHz)
 - 🔄 **Automatischer Reconnect bei Signalverlust** (verbindet bei Funkausriss ohne Nachfragen sofort neu)
 - 🛑 **Intelligente manuelle Abbruch-Erkennung** (kein ungewollter Reconnect bei Stop am Touchscreen der Osmo oder in der App)

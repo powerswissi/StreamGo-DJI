@@ -83,7 +83,7 @@
 ```bash
 # Repository klonen
 git clone https://github.com/powerswissi/StreamGo-DJI.git
-cd StreamGo-DJI/dji-remote-main
+cd StreamGo-DJI
 
 # Debug-APK kompilieren
 ./gradlew assembleDebug

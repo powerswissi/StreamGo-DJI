@@ -217,7 +217,7 @@ class DjiDevice(private val context: Context) {
             djiLogInfo("  ✓ WLAN '$wifiSsid' im Android WiFi-Scan bestätigt (Signal: ${item?.rssi} dBm, Band: ${item?.band})")
         } else {
             val available = WifiScanner.getAvailableSsids()
-            djiLogWarn("  ⚠️ Hinweis: WLAN '$wifiSsid' wurde im Android WiFi-Scan bisher nicht gefunden (evtl. versteckt). Verfügbar: [${available.joinToString(", ")}]")
+            djiLogInfo("  ℹ️ Info: WLAN '$wifiSsid' nicht im Android WiFi-Scan gelistet (z. B. Smartphone-Hotspot oder versteckt). Verfügbar: [${available.joinToString(", ")}]")
         }
 
         // configure
@@ -1048,11 +1048,9 @@ class DjiDevice(private val context: Context) {
             return
         }
 
-        // GOAL 7: WiFi-Validierung vor dem Senden
+        // WiFi-Validierung vor dem Senden:
         // Prüfen, ob SSID im Scan vorhanden ist.
-        // Wenn ja: RSSI/Band loggen.
-        // Wenn nein: WARNUNG + sichtbare SSIDs loggen.
-        // ABER: Nicht blockieren (versteckte SSIDs & Throttling erlauben).
+        // Wenn nicht vorhanden, nicht blockieren (z. B. Smartphone-Hotspot oder versteckte SSID).
         val isSsidDiscovered = WifiScanner.isSsidFound(ssid)
         if (isSsidDiscovered) {
             val scanItem = WifiScanner.getScanItem(ssid)
@@ -1060,7 +1058,7 @@ class DjiDevice(private val context: Context) {
         } else {
             val available = WifiScanner.getAvailableSsids()
             val availableStr = if (available.isEmpty()) "Keine WLANs im Scan" else available.joinToString(", ")
-            djiLogWarn("⚠️ WARNUNG: Ziel-WLAN '$ssid' wurde im aktuellen WiFi-Scan nicht gefunden (möglicherweise versteckt oder Scan gedrosselt). Verfügbare SSIDs: [$availableStr]. Fahre mit Konfiguration fort...")
+            djiLogInfo("ℹ️ INFO: Ziel-WLAN '$ssid' nicht im Android WiFi-Scan gelistet (z. B. lokaler Hotspot des Handys). Verfügbare SSIDs: [$availableStr]. Fahre mit Konfiguration fort...")
         }
 
         djiLogInfo("Sende SETUP_WIFI an DJI-Kamera...")

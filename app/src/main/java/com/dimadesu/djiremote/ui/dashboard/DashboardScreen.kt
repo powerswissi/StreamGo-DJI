@@ -313,9 +313,9 @@ private fun ActiveCameraCard(
                         )
                     } else if (device.wifiSsid.isNotBlank()) {
                         Text(
-                            "⚠️ Nicht in Reichweite",
+                            "Eigener Hotspot / Manuell",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFFD32F2F)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }

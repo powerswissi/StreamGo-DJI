@@ -361,7 +361,7 @@ fun DjiDeviceSettingsScreen(
             enabled = !liveDevice.isStarted
         )
 
-        // SSID Scan verification indicator (Requirement 7)
+        // SSID Scan verification indicator
         if (ssid.isNotBlank()) {
             Spacer(modifier = Modifier.height(4.dp))
             val isFound = WifiScanner.isSsidFound(ssid)
@@ -375,9 +375,9 @@ fun DjiDeviceSettingsScreen(
                 )
             } else {
                 Text(
-                    text = "⚠️ Nicht im aktuellen WiFi-Scan gefunden (Prüfe Hotspot-Reichweite)",
+                    text = "ℹ️ Nicht im Scan gefunden (Normal bei Handy-Hotspot oder versteckter SSID)",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.Medium
                 )
             }

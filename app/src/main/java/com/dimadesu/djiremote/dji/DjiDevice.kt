@@ -396,7 +396,11 @@ class DjiDevice(private val context: Context) {
             if (exception != null) append("\nException: ${exception.javaClass.simpleName}: ${exception.message}")
         }
 
-        val shortSummary = if (!details.isNullOrBlank()) "$reason: $details" else reason
+        val shortSummary = if (!details.isNullOrBlank()) {
+            if (details.contains(reason)) details else "$reason: $details"
+        } else {
+            reason
+        }
         lastError = shortSummary
         djiLogError("❌ FEHLER AUFGETRETEN:\n$fullDiagnostic", exception)
 
@@ -639,15 +643,24 @@ class DjiDevice(private val context: Context) {
                 }
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 cancelReconnect()
-                val reason = if (status != BluetoothGatt.GATT_SUCCESS) {
-                    "Verbindung getrennt mit Status $status: $decodedStatus"
-                } else {
-                    "Verbindung getrennt (GATT_SUCCESS / normaler Disconnect)"
+                val isGatt133 = status == 133 || status == 0x85
+                val isTimeout = status == 8 || status == 0x08 || status == 0x22
+                
+                val userFriendlyReason = when {
+                    status == BluetoothGatt.GATT_SUCCESS -> 
+                        "Kamera getrennt."
+                    isGatt133 || isTimeout -> 
+                        "Kamera nicht erreichbar. Ist deine DJI eingeschaltet und Bluetooth aktiv?"
+                    status == 0x13 -> 
+                        "Kamera hat die Verbindung beendet (evtl. ausgeschaltet oder Akku leer)."
+                    else -> 
+                        "Verbindung unterbrochen. Ist deine DJI in Reichweite und eingeschaltet?"
                 }
-                djiLogWarn("❌ $reason (vorheriger Zustand: $state)")
+                
+                djiLogWarn("❌ $userFriendlyReason (GATT Status $status, Zustand: $state)")
 
                 if (state != DjiDeviceState.IDLE && state != DjiDeviceState.STOPPING_STREAM) {
-                    failWithError("Bluetooth getrennt", "$reason im Zustand '$state'")
+                    failWithError("Kamera getrennt", userFriendlyReason)
                 } else {
                     reset(keepError = false)
                 }

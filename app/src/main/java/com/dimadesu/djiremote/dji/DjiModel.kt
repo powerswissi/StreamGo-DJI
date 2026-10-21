@@ -97,7 +97,13 @@ object DjiModel : DjiDeviceDelegate {
         device.stopLiveStream()
         scope.launch(Dispatchers.Main) {
             val latest = DjiRepository.devices.value.firstOrNull { it.id == settings.id } ?: settings
-            DjiRepository.updateDevice(latest.copy(isStarted = false, state = SettingsDjiDeviceState.IDLE))
+            DjiRepository.updateDevice(
+                latest.copy(
+                    isStarted = false,
+                    state = SettingsDjiDeviceState.IDLE,
+                    streamingStartedAt = null
+                )
+            )
         }
     }
 
@@ -142,10 +148,14 @@ object DjiModel : DjiDeviceDelegate {
 
             when (state) {
                 DjiDeviceState.IDLE, DjiDeviceState.WIFI_SETUP_FAILED -> {
-                    updated = updated.copy(isStarted = false, reconnectAttempt = 0)
+                    updated = updated.copy(isStarted = false, reconnectAttempt = 0, streamingStartedAt = null)
                 }
                 DjiDeviceState.RECONNECTING -> {
                     updated = updated.copy(isStarted = true, reconnectAttempt = device.getReconnectAttempts())
+                }
+                DjiDeviceState.STREAMING -> {
+                    val startedAt = existing.streamingStartedAt ?: System.currentTimeMillis()
+                    updated = updated.copy(isStarted = true, reconnectAttempt = 0, streamingStartedAt = startedAt)
                 }
                 else -> {
                     updated = updated.copy(isStarted = true, reconnectAttempt = 0)

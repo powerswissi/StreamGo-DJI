@@ -41,7 +41,7 @@ fun DjiDeviceSettingsScreen(
     var password by remember { mutableStateOf(liveDevice.wifiPassword) }
     var rtmpUrl by remember { mutableStateOf(liveDevice.rtmpUrl) }
     var resolution by remember { mutableStateOf(liveDevice.resolution) }
-    var bitrate by remember { mutableStateOf(liveDevice.bitrate) }
+    var bitrate by remember { mutableIntStateOf(liveDevice.bitrate) }
     var imageStabilization by remember { mutableStateOf(liveDevice.imageStabilization) }
 
     var expandedResolution by remember { mutableStateOf(false) }
@@ -483,7 +483,7 @@ fun DjiDeviceSettingsScreen(
         if (liveDevice.model == SettingsDjiDeviceModel.OSMO_POCKET_3 ||
             liveDevice.model == SettingsDjiDeviceModel.OSMO_POCKET_4) {
             val fpsOptions = listOf(25, 30)
-            var fps by remember { mutableStateOf(liveDevice.fps) }
+            var fps by remember { mutableIntStateOf(liveDevice.fps) }
             Spacer(modifier = Modifier.height(8.dp))
             ExposedDropdownMenuBox(
                 expanded = expandedFps,

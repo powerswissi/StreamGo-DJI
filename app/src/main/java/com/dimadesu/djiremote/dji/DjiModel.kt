@@ -107,6 +107,17 @@ object DjiModel : DjiDeviceDelegate {
         }
     }
 
+    /**
+     * Stoppt alle aktuell laufenden Streams sauber und gibt Bluetooth-Ressourcen frei.
+     * Wird z. B. aufgerufen, wenn die App im Task-Manager weggewischt wird.
+     */
+    fun stopAllStreams() {
+        val active = DjiRepository.devices.value.filter { it.isStarted }
+        for (dev in active) {
+            stopStreaming(dev)
+        }
+    }
+
     // Find which profile owns a DjiDevice instance via === identity, matching Moblin
     private fun getSettingsForDevice(djiDevice: DjiDevice): SettingsDjiDevice? {
         val profileId = deviceWrappers.entries.firstOrNull { it.value === djiDevice }?.key

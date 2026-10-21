@@ -12,3 +12,5 @@ keystore.properties
 /app/release
 
 /inspiration/
+
+.kotlin/

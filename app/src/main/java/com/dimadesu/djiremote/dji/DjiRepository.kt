@@ -1,10 +1,12 @@
 package com.dimadesu.djiremote.dji
 
+import android.annotation.SuppressLint
 import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.util.UUID
 
+@SuppressLint("StaticFieldLeak")
 object DjiRepository {
     private val _devices = MutableStateFlow<List<SettingsDjiDevice>>(emptyList())
     val devices: StateFlow<List<SettingsDjiDevice>> = _devices

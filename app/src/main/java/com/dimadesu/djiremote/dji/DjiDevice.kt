@@ -1,5 +1,6 @@
 package com.dimadesu.djiremote.dji
 
+import android.annotation.SuppressLint
 import android.bluetooth.*
 import android.content.Context
 import android.os.Build
@@ -82,6 +83,7 @@ interface DjiDeviceDelegate {
     fun djiDeviceStreamingState(device: DjiDevice, state: DjiDeviceState, error: String? = null)
 }
 
+@SuppressLint("MissingPermission")
 class DjiDevice(private val context: Context) {
     private var bluetoothGatt: BluetoothGatt? = null
     private var fff5Characteristic: BluetoothGattCharacteristic? = null
@@ -966,18 +968,18 @@ class DjiDevice(private val context: Context) {
                 char,
                 chunk,
                 BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
-            ) ?: BluetoothStatusCodes.ERROR_MISSING_BLUETOOTH_CONNECT_PERMISSION
+            ) ?: BluetoothGatt.GATT_FAILURE
         } else {
             char.value = chunk
             char.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
             if (bluetoothGatt?.writeCharacteristic(char) == true) {
-                BluetoothStatusCodes.SUCCESS
+                BluetoothGatt.GATT_SUCCESS
             } else {
                 BluetoothGatt.GATT_FAILURE
             }
         }
 
-        if (result != BluetoothStatusCodes.SUCCESS) {
+        if (result != BluetoothGatt.GATT_SUCCESS) {
             djiLogWarn("  writeCharacteristic gab Code $result zurück")
             // Never drop a chunk: a missing chunk corrupts the whole message and the camera never answers.
             writeRetryCount++

@@ -56,6 +56,14 @@ class DjiConnectionService : Service() {
         releaseWakeLock()
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        // Benutzer hat die App aus den Recent Apps / Task-Manager weggewischt:
+        // Alle Kameras ordnungsgemäß stoppen und Service beenden
+        DjiModel.stopAllStreams()
+        stopSelf()
+    }
+
     private fun observeDevices() {
         devicesJob?.cancel()
         devicesJob = scope.launch {

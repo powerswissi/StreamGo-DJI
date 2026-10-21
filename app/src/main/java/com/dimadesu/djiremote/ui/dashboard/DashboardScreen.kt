@@ -29,7 +29,7 @@ fun DashboardScreen(
     val scanResults by WifiScanner.scanResults.collectAsState()
     val isScanningWifi by WifiScanner.isScanning.collectAsState()
 
-    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
         WifiScanner.startScan(context)
         while (true) {

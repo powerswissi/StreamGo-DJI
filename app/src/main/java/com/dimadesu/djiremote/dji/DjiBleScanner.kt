@@ -30,7 +30,8 @@ object DjiBleScanner {
     private val _discovered = MutableStateFlow<List<DiscoveredDjiDevice>>(emptyList())
     val discovered: StateFlow<List<DiscoveredDjiDevice>> = _discovered
 
-    private var scanning = false
+    private val _isScanning = MutableStateFlow(false)
+    val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
     private val _scanError = MutableStateFlow<String?>(null)
     val scanError: StateFlow<String?> = _scanError.asStateFlow()
     private var scanner: BluetoothLeScanner? = null
@@ -67,7 +68,9 @@ object DjiBleScanner {
 
     @SuppressLint("MissingPermission")
     fun startScanning(context: Context, filterOnlyDji: Boolean = true) {
-        if (scanning) return
+        if (_isScanning.value) {
+            stopScanning(clearResults = false)
+        }
         this.filterOnlyDji = filterOnlyDji
         val adapter = BluetoothAdapter.getDefaultAdapter()
         if (adapter == null) {
@@ -87,9 +90,11 @@ object DjiBleScanner {
             return
         }
 
-        // Clear previous results
-        foundDevices.clear()
-        _discovered.value = emptyList()
+        // Clear previous results when starting a fresh scan
+        synchronized(foundDevices) {
+            foundDevices.clear()
+            _discovered.value = emptyList()
+        }
         _scanError.value = null
 
         callback = object : ScanCallback() {
@@ -100,17 +105,6 @@ object DjiBleScanner {
                     val name = device.name ?: address
                     val rssi = result.rssi
 
-                    // Log manufacturer data for debugging
-                    val mfgDetails = StringBuilder()
-                    scanRecord?.manufacturerSpecificData?.let { mfgData ->
-                        for (i in 0 until mfgData.size()) {
-                            val key = mfgData.keyAt(i)
-                            val data = mfgData.valueAt(i)
-                            val hex = data.joinToString(" ") { "%02X".format(it) }
-                            mfgDetails.append("[key=$key, data=$hex] ")
-                        }
-                    }
-
                     val isDji = isDjiAdvertisement(scanRecord)
                     if (this@DjiBleScanner.filterOnlyDji && !isDji) {
                         return
@@ -119,14 +113,14 @@ object DjiBleScanner {
                     // Detect model
                     val model = getModelFromScanRecord(scanRecord)
 
-                    if (isDji) {
-                    } else {
-                    }
-
                     val id = UUID.nameUUIDFromBytes(address.toByteArray(StandardCharsets.UTF_8)).toString()
                     synchronized(foundDevices) {
-                        if (foundDevices.none { it.id == id }) {
+                        val existingIdx = foundDevices.indexOfFirst { it.id == id }
+                        if (existingIdx == -1) {
                             foundDevices.add(DiscoveredDjiDevice(id, address, name, model, rssi))
+                            _discovered.value = foundDevices.toList()
+                        } else if (rssi != 0 && foundDevices[existingIdx].rssi != rssi) {
+                            foundDevices[existingIdx] = foundDevices[existingIdx].copy(rssi = rssi)
                             _discovered.value = foundDevices.toList()
                         }
                     }
@@ -141,36 +135,45 @@ object DjiBleScanner {
                 val decoded = GattErrorDecoder.decodeBleScanError(errorCode)
                 val errMsg = "BLE-Scan fehlgeschlagen: $decoded"
                 _scanError.value = errMsg
+                _isScanning.value = false
             }
         }
 
         val settings = ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
         try {
             scanner?.startScan(null, settings, callback)
-            scanning = true
+            _isScanning.value = true
         } catch (e: Exception) {
             val err = "Fehler beim Aufruf von startScan(): ${e.message}"
             _scanError.value = err
+            _isScanning.value = false
             return
         }
 
-        // stop after 30s automatically
-        handler.postDelayed({ stopScanning() }, 30_000)
+        // stop active BLE radio scan after 30s automatically, but keep discovered devices visible
+        handler.removeCallbacksAndMessages(null)
+        handler.postDelayed({ stopScanning(clearResults = false) }, 30_000)
     }
 
     @SuppressLint("MissingPermission")
-    fun stopScanning() {
-        if (!scanning) return
-        try {
-            scanner?.stopScan(callback)
-        } catch (e: Exception) {
+    fun stopScanning(clearResults: Boolean = false) {
+        handler.removeCallbacksAndMessages(null)
+        if (_isScanning.value) {
+            try {
+                scanner?.stopScan(callback)
+            } catch (e: Exception) {
+            }
         }
         callback = null
         scanner = null
-        scanning = false
-        _scanError.value = null
-        foundDevices.clear()
-        _discovered.value = emptyList()
+        _isScanning.value = false
+        if (clearResults) {
+            _scanError.value = null
+            synchronized(foundDevices) {
+                foundDevices.clear()
+                _discovered.value = emptyList()
+            }
+        }
     }
 
     private fun isDjiAdvertisement(record: ScanRecord?): Boolean {

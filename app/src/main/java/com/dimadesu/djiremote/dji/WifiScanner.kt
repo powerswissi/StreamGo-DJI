@@ -95,6 +95,8 @@ object WifiScanner {
         if (!wifiManager.isWifiEnabled) {
             val err = "WLAN ist auf dem Gerät deaktiviert. Bitte WLAN in den Einstellungen einschalten."
             _lastScanError.value = err
+            _isScanning.value = false
+            return
         }
 
         // Fetch any existing/cached scan results immediately
@@ -137,7 +139,12 @@ object WifiScanner {
         }
 
         val filter = IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)
-        context.registerReceiver(wifiReceiver, filter)
+        ContextCompat.registerReceiver(
+            context,
+            wifiReceiver,
+            filter,
+            ContextCompat.RECEIVER_EXPORTED
+        )
         receiverRegistered = true
     }
 

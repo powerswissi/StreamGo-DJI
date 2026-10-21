@@ -14,6 +14,7 @@ import com.dimadesu.djiremote.dji.DjiDeviceStorage
 import com.dimadesu.djiremote.dji.DjiModel
 import com.dimadesu.djiremote.dji.DjiRepository
 import com.dimadesu.djiremote.dji.SettingsDjiDeviceState
+import com.dimadesu.djiremote.settings.AppSettingsRepository
 import java.util.UUID
 
 class StreamGoWidgetProvider : AppWidgetProvider() {
@@ -33,6 +34,7 @@ class StreamGoWidgetProvider : AppWidgetProvider() {
                 val profileIdStr = intent.getStringExtra(EXTRA_PROFILE_ID) ?: return
                 val profileId = try { UUID.fromString(profileIdStr) } catch (e: Exception) { return }
 
+                AppSettingsRepository.initialize(context)
                 DjiRepository.initialize(context)
                 val devices = DjiRepository.devices.value
                 val device = devices.firstOrNull { it.id == profileId } ?: return
@@ -78,13 +80,13 @@ class StreamGoWidgetProvider : AppWidgetProvider() {
             views.setOnClickPendingIntent(R.id.widget_app_link, appPendingIntent)
 
             // Load profiles
+            AppSettingsRepository.initialize(context)
             DjiRepository.initialize(context)
             val devices = DjiRepository.devices.value
 
             views.removeAllViews(R.id.widget_profiles_container)
 
             if (devices.isEmpty()) {
-                val emptyViews = RemoteViews(context.packageName, R.layout.widget_streamgo)
                 views.setViewVisibility(R.id.widget_empty_text, View.VISIBLE)
             } else {
                 views.setViewVisibility(R.id.widget_empty_text, View.GONE)

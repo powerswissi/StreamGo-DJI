@@ -28,11 +28,18 @@ fun DjiBleScannerScreen(
 ) {
     val context = LocalContext.current
     val discoveredState by DjiBleScanner.discovered.collectAsState()
+    val isScanning by DjiBleScanner.isScanning.collectAsState()
     val scanError by DjiBleScanner.scanError.collectAsState(initial = null)
     val isBtEnabled = DjiBleScanner.isBluetoothEnabled(context)
     var showAllDevices by remember { mutableStateOf(false) }
 
     val hasPermissions = DjiBleScanner.hasPermissions(context)
+
+    DisposableEffect(Unit) {
+        onDispose {
+            DjiBleScanner.stopScanning(clearResults = true)
+        }
+    }
 
     val permissionsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
@@ -135,13 +142,22 @@ fun DjiBleScannerScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator()
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "Suche nach DJI-Kameras...",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    if (isScanning) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Suche nach DJI-Kameras...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Text(
+                            text = "Keine Kamera gefunden.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Kamera einschalten & Bluetooth aktivieren",
@@ -203,7 +219,7 @@ fun DjiBleScannerScreen(
                 Text("Neu scannen ⟳")
             }
             OutlinedButton(onClick = {
-                DjiBleScanner.stopScanning()
+                DjiBleScanner.stopScanning(clearResults = true)
                 onBack()
             }) {
                 Text("Zurück")

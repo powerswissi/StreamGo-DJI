@@ -2,8 +2,6 @@
 
 Die schnelle, zuverlässige Android-App zur Steuerung von DJI Action- und Pocket-Kameras über Bluetooth für ultra-stabiles RTMP-Live-Streaming (z.B. zu Belabox, Twitch, YouTube).
 
-![StreamGo DJI Screenshot](docs/streamgo-dji-screenshot.png)
-
 > [!NOTE]
 > **✨ 100% Vibe Coding Projekt:**  
 > Ich bin kein professioneller Entwickler und habe ehrlich gesagt keine tiefe Ahnung von Android-Code – aber durch **Vibe Coding** mit KI baue und teste ich mir das Ding genau so zusammen, bis es für mich in der Praxis perfekt funktioniert! 🚀

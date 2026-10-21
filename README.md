@@ -2,7 +2,7 @@
 
 # StreamGo DJI by Swissi 🇨🇭
 
-### Die ultra-schnelle, stabile Android-App zur Steuerung von DJI Action- und Pocket-Kameras über Bluetooth & Wi-Fi für professionelles RTMP-Livestreaming.
+### Android-App zur Steuerung von DJI Action- und Pocket-Kameras über Bluetooth & Wi-Fi für RTMP-Livestreaming.
 
 [![GitHub Release](https://img.shields.io/github/v/release/powerswissi/StreamGo-DJI?style=for-the-badge&color=brightgreen)](https://github.com/powerswissi/StreamGo-DJI/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/powerswissi/StreamGo-DJI/total?style=for-the-badge&color=blue)](https://github.com/powerswissi/StreamGo-DJI/releases)
@@ -11,7 +11,7 @@
 
 <br/>
 
-[📥 **Download Neueste APK (v1.0.0)**](https://github.com/powerswissi/StreamGo-DJI/releases/latest) • [✨ Release Notes](https://github.com/powerswissi/StreamGo-DJI/releases/tag/v1.0.0) • [🐛 Problem melden](https://github.com/powerswissi/StreamGo-DJI/issues)
+[📥 **Download Neueste APK**](https://github.com/powerswissi/StreamGo-DJI/releases/latest) • [Release Notes](https://github.com/powerswissi/StreamGo-DJI/releases) • [Problem melden](https://github.com/powerswissi/StreamGo-DJI/issues)
 
 </div>
 
@@ -33,7 +33,8 @@
 
 ## ✨ Features
 
-- ⚡ **1-Click Stream direkt aus der Profil-Liste:** Start / Stop in Sekundenschnelle ohne verschachtelte Menüs.
+- 📱 **Eigener Smartphone-Hotspot:** Direkte Schnell-Auswahl für den lokalen Handy-Hotspot, auch wenn Android diesen nicht in den WLAN-Scan aufnimmt.
+- ⚡ **1-Click Stream direkt aus der Profil-Liste:** Start / Stop ohne Umwege.
 - 📱 **Android Homescreen Widget:** Stream direkt vom Smartphone-Homescreen starten & stoppen inkl. Live-Status und Akkuanzeige.
 - 🎛️ **Eigenständiges Preset-System:** 
   - Beliebig viele Streaming- & WLAN-Vorlagen erstellen, editieren und verwalten.

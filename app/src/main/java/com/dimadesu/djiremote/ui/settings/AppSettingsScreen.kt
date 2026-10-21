@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.sp
 import com.dimadesu.djiremote.dji.DjiRepository
 
 @Composable
-fun AppSettingsScreen() {
+fun AppSettingsScreen(onBack: () -> Unit = {}) {
     val context = LocalContext.current
     val devices by DjiRepository.devices.collectAsState()
 
@@ -33,19 +33,28 @@ fun AppSettingsScreen() {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Header
-        Column {
-            Text(
-                text = "Einstellungen",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = "StreamGo DJI Konfiguration & App-Info",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        // Header with Back Button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Text("←", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            }
+            Spacer(modifier = Modifier.width(4.dp))
+            Column {
+                Text(
+                    text = "Einstellungen",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "StreamGo DJI Konfiguration & App-Info",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
 
         // App Info & Branding Card

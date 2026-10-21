@@ -8,18 +8,11 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import com.dimadesu.djiremote.dji.DjiRepository
 import com.dimadesu.djiremote.dji.SettingsDjiDevice
-import com.dimadesu.djiremote.ui.dashboard.DashboardScreen
 import com.dimadesu.djiremote.ui.dji.DjiBleScannerScreen
 import com.dimadesu.djiremote.ui.dji.DjiDeviceSettingsScreen
 import com.dimadesu.djiremote.ui.dji.DjiDevicesSettingsScreen
@@ -36,88 +29,37 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             DJIRemoteTheme {
-                var currentTab by remember { mutableStateOf("profiles") }
-                var screen by remember { mutableStateOf("main") } // "main", "device", "device-scanner"
+                var screen by remember { mutableStateOf("devices") } // "devices", "device", "device-scanner", "settings"
                 var selectedDevice by remember { mutableStateOf<SettingsDjiDevice?>(null) }
 
-                BackHandler(enabled = screen != "main" || currentTab != "profiles") {
-                    if (screen == "device-scanner") {
-                        screen = "device"
-                    } else if (screen == "device") {
-                        screen = "main"
-                    } else if (currentTab != "profiles") {
-                        currentTab = "profiles"
+                BackHandler(enabled = screen != "devices") {
+                    screen = when (screen) {
+                        "device" -> "devices"
+                        "device-scanner" -> "device"
+                        "settings" -> "devices"
+                        else -> "devices"
                     }
                 }
 
-                Scaffold(
-                    modifier = Modifier.fillMaxSize(),
-                    bottomBar = {
-                        // Show bottom nav bar only when at the top-level main screens
-                        if (screen == "main") {
-                            NavigationBar {
-                                val devices by DjiRepository.devices.collectAsState()
-                                val isAnyStreaming = devices.any { it.isStarted }
-
-                                NavigationBarItem(
-                                    selected = currentTab == "profiles",
-                                    onClick = { currentTab = "profiles" },
-                                    icon = { Text("📹") },
-                                    label = { Text("Profile") }
-                                )
-
-                                NavigationBarItem(
-                                    selected = currentTab == "dashboard",
-                                    onClick = { currentTab = "dashboard" },
-                                    icon = {
-                                        BadgedBox(
-                                            badge = {
-                                                if (isAnyStreaming) {
-                                                    Badge { Text("LIVE") }
-                                                }
-                                            }
-                                        ) {
-                                            Text("📊")
-                                        }
-                                    },
-                                    label = { Text("Dashboard") }
-                                )
-
-                                NavigationBarItem(
-                                    selected = currentTab == "settings",
-                                    onClick = { currentTab = "settings" },
-                                    icon = { Text("⚙️") },
-                                    label = { Text("Einstellungen") }
-                                )
-                            }
-                        }
-                    }
-                ) { innerPadding ->
+                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
                         when (screen) {
-                            "main" -> {
-                                when (currentTab) {
-                                    "profiles" -> {
-                                        DjiDevicesSettingsScreen(onOpenDevice = {
-                                            selectedDevice = it
-                                            screen = "device"
-                                        })
+                            "devices" -> {
+                                DjiDevicesSettingsScreen(
+                                    onOpenDevice = {
+                                        selectedDevice = it
+                                        screen = "device"
+                                    },
+                                    onOpenSettings = {
+                                        screen = "settings"
                                     }
-                                    "dashboard" -> {
-                                        DashboardScreen(onNavigateToProfiles = {
-                                            currentTab = "profiles"
-                                        })
-                                    }
-                                    "settings" -> {
-                                        AppSettingsScreen()
-                                    }
-                                }
+                                )
                             }
                             "device" -> {
                                 selectedDevice?.let { d ->
                                     DjiDeviceSettingsScreen(
                                         device = d,
-                                        onBack = { screen = "main" },
+                                        onBack = { screen = "devices" },
                                         onOpenScanner = {
                                             screen = "device-scanner"
                                         }
@@ -140,6 +82,9 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onBack = { screen = "device" }
                                 )
+                            }
+                            "settings" -> {
+                                AppSettingsScreen(onBack = { screen = "devices" })
                             }
                         }
                     }

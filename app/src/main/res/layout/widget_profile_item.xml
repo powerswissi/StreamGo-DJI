@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:padding="6dp"
+    android:background="@drawable/widget_item_background"
+    android:layout_marginBottom="6dp">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/item_profile_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Profil Name"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/item_profile_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Bereit"
+            android:textColor="#AAAAAA"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/item_action_button"
+        android:layout_width="wrap_content"
+        android:layout_height="36dp"
+        android:text="▶ Start"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:background="@drawable/widget_button_start"
+        android:paddingLeft="12dp"
+        android:paddingRight="12dp" />
+</LinearLayout>

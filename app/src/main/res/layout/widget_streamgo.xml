@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="@drawable/widget_background">
+
+    <!-- Header Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="StreamGo DJI"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_app_link"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="App öffnen ↗"
+            android:textColor="#3B82F6"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:padding="4dp" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#33FFFFFF"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Container where dynamic profiles will be placed -->
+    <LinearLayout
+        android:id="@+id/widget_profiles_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Default Empty / Fallback Item -->
+        <TextView
+            android:id="@+id/widget_empty_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Keine Profile in StreamGo gefunden"
+            android:textColor="#AAAAAA"
+            android:textSize="12sp"
+            android:gravity="center"
+            android:padding="8dp" />
+    </LinearLayout>
+</LinearLayout>

@@ -30,6 +30,11 @@ object DjiRepository {
     private fun saveToStorage() {
         context?.let { ctx ->
             DjiDeviceStorage.saveDevices(ctx, _devices.value)
+            try {
+                com.dimadesu.djiremote.widget.StreamGoWidgetProvider.updateAllWidgets(ctx)
+            } catch (e: Exception) {
+                // Ignore widget updates if unavailable
+            }
         }
     }
 

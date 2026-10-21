@@ -117,6 +117,7 @@ class DjiDevice(private val context: Context) {
     private var model: SettingsDjiDeviceModel = SettingsDjiDeviceModel.UNKNOWN
     private var batteryPercentage: Int? = null
     private var cameraTemperature: Int? = null
+    private var liveBitrateKbps: Int? = null
 
     private var userInitiatedStop: Boolean = false
     private var reconnectAttempts: Int = 0
@@ -266,6 +267,7 @@ class DjiDevice(private val context: Context) {
 
     fun getBatteryPercentage(): Int? = batteryPercentage
     fun getCameraTemperature(): Int? = cameraTemperature
+    fun getLiveBitrateKbps(): Int? = liveBitrateKbps
     fun getLastError(): String? = lastError
     fun getReconnectAttempts(): Int = reconnectAttempts
 
@@ -284,6 +286,7 @@ class DjiDevice(private val context: Context) {
         releaseGatt()
         batteryPercentage = null
         cameraTemperature = null
+        liveBitrateKbps = null
         seenActiveStreamInCurrentSession = false
         rxBuffer = ByteArray(0)
         clearWriteState()
@@ -1187,6 +1190,15 @@ class DjiDevice(private val context: Context) {
                     val streamState = message.payload[0].toInt() and 0xFF
                     val streamFlag = if (message.payload.size >= 2) message.payload[1].toInt() and 0xFF else 0
                     djiLog("Broadcast-Status Telemetrie: State=0x${streamState.toString(16)}, Flag=0x${streamFlag.toString(16)}")
+
+                    // payload[6..7] (little endian) schwankt um die eingestellte Bitrate in kbit/s
+                    // (z. B. 0x2054 = 8276 bei 8 Mbit/s) -> tatsächlich von der Kamera gemeldete Encoder-Bitrate
+                    if (streamState == 0x02 && streamFlag == 0x08 && message.payload.size >= 8) {
+                        val kbps = ((message.payload[7].toInt() and 0xFF) shl 8) or (message.payload[6].toInt() and 0xFF)
+                        if (kbps in 100..60000) {
+                            liveBitrateKbps = kbps
+                        }
+                    }
 
                     if (streamFlag == 0x08 && streamState == 0x02) {
                         seenActiveStreamInCurrentSession = true

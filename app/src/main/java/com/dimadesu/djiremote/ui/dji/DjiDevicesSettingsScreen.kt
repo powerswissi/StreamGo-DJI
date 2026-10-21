@@ -299,18 +299,18 @@ fun DjiDevicesSettingsScreen(
                                     else String.format(Locale.getDefault(), "%02d:%02d", m, s)
                                 } else "--:--"
 
-                                // Berechnetes übertragendes Datenvolumen in Megabyte (MB)
-                                // Formel: (bitrate_bps / 8) * sekunden / 1.000.000
+                                // Echte, von der Kamera gemeldete Encoder-Bitrate (kbit/s); Fallback: eingestellte Bitrate
+                                val reportedKbps = device.liveBitrateKbps
+                                val effectiveKbps = reportedKbps ?: (device.bitrate / 1000)
+                                val rateText = if (isStreaming) {
+                                    String.format(Locale.getDefault(), "↑ %.1f Mbit/s", effectiveKbps / 1000.0)
+                                } else null
+
+                                // Geschätztes Datenvolumen (Bitrate x Laufzeit) - nur Näherung, keine Messung am Netzwerk
                                 val streamedMb = if (isStreaming && streamSec > 0) {
-                                    val bytesTransferred = (device.bitrate.toDouble() / 8.0) * streamSec
-                                    val mb = bytesTransferred / (1024.0 * 1024.0)
-                                    val mbPerSec = (device.bitrate.toDouble() / 8.0) / (1024.0 * 1024.0)
-                                    val rateStr = String.format(Locale.getDefault(), "%.1f MB/s", mbPerSec)
-                                    if (mb >= 1000.0) {
-                                        String.format(Locale.getDefault(), "%.2f GB (↑%s)", mb / 1024.0, rateStr)
-                                    } else {
-                                        String.format(Locale.getDefault(), "%.1f MB (↑%s)", mb, rateStr)
-                                    }
+                                    val mb = (effectiveKbps * 1000.0 / 8.0) * streamSec / (1024.0 * 1024.0)
+                                    if (mb >= 1000.0) String.format(Locale.getDefault(), "≈ %.2f GB", mb / 1024.0)
+                                    else String.format(Locale.getDefault(), "≈ %.1f MB", mb)
                                 } else null
 
                                 val statusLabel = when (device.state) {
@@ -346,36 +346,31 @@ fun DjiDevicesSettingsScreen(
                                             }
                                         )
 
-                                        // Telemetrie: Akku + Temperatur
-                                        Row(
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            if (device.batteryPercentage != null) {
-                                                Text(
-                                                    text = "🔋 ${device.batteryPercentage}%",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    color = if (device.batteryPercentage!! <= 20) Color(0xFFD32F2F) else Color(0xFF2E7D32)
-                                                )
-                                            }
-                                            if (device.cameraTemperature != null) {
-                                                Text(
-                                                    text = "🌡️ ${device.cameraTemperature}°C",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    color = if (device.cameraTemperature!! >= 60) Color(0xFFD32F2F) else MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            }
+                                        // Temperatur (Akku steht bereits im Header)
+                                        if (device.cameraTemperature != null) {
+                                            Text(
+                                                text = "🌡️ ${device.cameraTemperature}°C",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = if (device.cameraTemperature!! >= 60) Color(0xFFD32F2F) else MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        if (rateText != null) {
+                                            Text(
+                                                text = rateText,
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFF2E7D32)
+                                            )
                                         }
                                     }
 
                                     Column(horizontalAlignment = Alignment.End) {
                                         Text(
-                                            text = if (streamedMb != null) "LAUFZEIT • $streamedMb" else "STREAM-ZEIT",
+                                            text = if (streamedMb != null) "STREAM-ZEIT • $streamedMb" else "STREAM-ZEIT",
                                             fontSize = 9.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = if (streamedMb != null) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurfaceVariant
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                         Text(
                                             text = stopwatch,

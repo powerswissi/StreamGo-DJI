@@ -40,6 +40,8 @@ class DjiConnectionService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        DjiRepository.initialize(applicationContext)
+        com.dimadesu.djiremote.settings.AppSettingsRepository.initialize(applicationContext)
         createNotificationChannel()
     }
 
@@ -62,10 +64,17 @@ class DjiConnectionService : Service() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
-        // Benutzer hat die App aus den Recent Apps / Task-Manager weggewischt:
-        // Alle Kameras ordnungsgemäß stoppen und Service beenden
-        DjiModel.stopAllStreams()
-        stopSelf()
+        // Wenn die App aus den Recent Apps / Task-Manager weggewischt wird,
+        // darf der Stream auf der Osmo NICHT beendet werden!
+        // Solange ein Gerät aktiv ist, halten wir den Foreground-Service weiter am Laufen.
+        val hasActive = DjiRepository.devices.value.any { it.isStarted }
+        if (hasActive) {
+            startForeground(NOTIFICATION_ID, buildNotification())
+            acquireWakeLock()
+            acquireWifiLock()
+        } else {
+            stopSelf()
+        }
     }
 
     private fun observeDevices() {
@@ -161,8 +170,8 @@ class DjiConnectionService : Service() {
         )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("DJI Remote")
-            .setContentText("Device connection active")
+            .setContentTitle("StreamGo DJI aktiv")
+            .setContentText("Kamera-Stream läuft im Hintergrund weiter")
             .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
             .setContentIntent(pendingIntent)
             .setOngoing(true)

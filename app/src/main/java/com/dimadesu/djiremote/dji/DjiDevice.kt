@@ -124,6 +124,7 @@ class DjiDevice(private val context: Context) {
     private var lastBatteryAlertAt: Long = 0L
 
     private var userInitiatedStop: Boolean = false
+    private var streamEstablished: Boolean = false
     private var reconnectAttempts: Int = 0
     private var reconnectRunnable: Runnable? = null
     private var connectRunnable: Runnable? = null
@@ -199,6 +200,7 @@ class DjiDevice(private val context: Context) {
         // (Ursache für "Livestream gestartet bleibt hängen" + BLE-Stack blockiert -> App-Neustart nötig).
         if (!isReconnectAttempt) {
             reconnectAttempts = 0
+            streamEstablished = false
         }
         cancelReconnect()
 
@@ -251,17 +253,49 @@ class DjiDevice(private val context: Context) {
         }
     }
 
+    /**
+     * Stellt nur die BLE-GATT-Verbindung zu einer bereits streamenden Osmo wieder her,
+     * OHNE den laufenden Stream auf der Kamera zu stoppen oder neu zu initialisieren.
+     */
+    private fun reconnectBleOnly(address: String) {
+        cancelReconnect()
+        DjiConnectionService.startIfNeeded(context)
+        cleanupBleForStreamingReconnect()
+        djiLogInfo("Versuche stille BLE-Wiederverbindung zu laufender Osmo: $address...")
+        val sinceRelease = SystemClock.elapsedRealtime() - lastGattReleaseAt
+        val wait = (RECONNECT_GUARD_MS - sinceRelease).coerceAtLeast(0L)
+        if (wait > 0L) {
+            val runnable = Runnable {
+                connectRunnable = null
+                connectToAddress(address)
+            }
+            connectRunnable = runnable
+            mainHandler.postDelayed(runnable, wait)
+        } else {
+            connectToAddress(address)
+        }
+    }
+
+    private fun cleanupBleForStreamingReconnect() {
+        stopStartStreamingTimer()
+        stopStopStreamingTimer()
+        stopStreamingHeartbeatTimer()
+        cancelPendingConnect()
+        releaseGatt()
+        rxBuffer = ByteArray(0)
+        clearWriteState()
+    }
+
     fun stopLiveStream() {
-        if (state == DjiDeviceState.IDLE) return
+        if (state == DjiDeviceState.IDLE && !streamEstablished) return
+        userInitiatedStop = true
+        streamEstablished = false
+        cancelReconnect()
         // No active BLE link (e.g. waiting for reconnect or still connecting): nothing to send, just tear down.
         if (bluetoothGatt == null || fff5Characteristic == null) {
-            userInitiatedStop = true
-            cancelReconnect()
             reset(keepError = false)
             return
         }
-        userInitiatedStop = true
-        cancelReconnect()
         djiLogInfo("stopLiveStream() aufgerufen in Zustand: $state")
         stopStartStreamingTimer()
         startStopStreamingTimer()
@@ -269,6 +303,7 @@ class DjiDevice(private val context: Context) {
         setState(DjiDeviceState.STOPPING_STREAM)
     }
 
+    fun isStreamEstablished(): Boolean = streamEstablished
     fun getBatteryPercentage(): Int? = batteryPercentage
     fun getCameraTemperature(): Int? = cameraTemperature
     fun getLiveBitrateKbps(): Int? = liveBitrateKbps
@@ -288,6 +323,7 @@ class DjiDevice(private val context: Context) {
         cancelPendingConnect()
 
         releaseGatt()
+        streamEstablished = false
         batteryPercentage = null
         cameraTemperature = null
         liveBitrateKbps = null
@@ -348,6 +384,28 @@ class DjiDevice(private val context: Context) {
     }
 
     private fun scheduleReconnect() {
+        // Wenn der Stream auf der Osmo bereits erfolgreich gestartet wurde (streamEstablished),
+        // läuft die Kamera per WLAN autonom weiter. Wir versuchen dann unbegrenzt im Hintergrund,
+        // nur die BLE-Telemetrie-Verbindung wiederherzustellen – niemals auf IDLE gehen!
+        if (streamEstablished && !userInitiatedStop) {
+            val delay = when (reconnectAttempts) {
+                0 -> 2000L
+                1 -> 4000L
+                2 -> 6000L
+                else -> 10000L
+            }
+            reconnectAttempts++
+            djiLogInfo("Stiller BLE-Reconnect während aktivem Stream geplant in ${delay}ms (Versuch #$reconnectAttempts)")
+            reconnectRunnable = Runnable {
+                val addr = deviceAddress
+                if (!addr.isNullOrEmpty() && streamEstablished && !userInitiatedStop) {
+                    reconnectBleOnly(addr)
+                }
+            }
+            mainHandler.postDelayed(reconnectRunnable!!, delay)
+            return
+        }
+
         val appSettings = com.dimadesu.djiremote.settings.AppSettingsRepository.settings.value
         if (!appSettings.autoReconnectEnabled) {
             djiLog("Auto-Reconnect in den App-Einstellungen deaktiviert. Gehe in IDLE.")
@@ -399,6 +457,13 @@ class DjiDevice(private val context: Context) {
      * last TX, last RX, exception, and WiFi information.
      */
     fun failWithError(reason: String, details: String? = null, exception: Throwable? = null) {
+        if (streamEstablished && !userInitiatedStop) {
+            djiLogWarn("⚠️ BLE-Fehler während laufendem Stream ($reason: ${details ?: ""}) – Osmo streamt weiter, plane stillen BLE-Reconnect...")
+            cleanupBleForStreamingReconnect()
+            scheduleReconnect()
+            return
+        }
+
         val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
         val gattDesc = lastGattStatus?.let { "$it (${GattErrorDecoder.decodeGattStatus(it)})" } ?: "N/A"
         val wifiInfo = "SSID='$wifiSsid' (im Scan gefunden: ${wifiSsid?.let { WifiScanner.isSsidFound(it) } ?: false})"
@@ -462,15 +527,10 @@ class DjiDevice(private val context: Context) {
     }
 
     private fun startStreamingHeartbeatTimer() {
+        // Kein destruktiver 8s-Heartbeat-Abbruch mehr:
+        // Die Osmo streamt autonom über WLAN weiter, auch wenn keine BLE-Telemetrie kommt
+        // oder das Smartphone außer Bluetooth-Reichweite ist.
         stopStreamingHeartbeatTimer()
-        streamingHeartbeatRunnable = Runnable {
-            if (state == DjiDeviceState.STREAMING) {
-                djiLogWarn("⚠️ Stream-Heartbeat Timeout: Signal zur DJI-Kamera verloren! Starte automatischen Reconnect...")
-                failWithError("Signal zur Kamera verloren", "Keine Telemetrie mehr empfangen während STREAMING")
-                scheduleReconnect()
-            }
-        }
-        mainHandler.postDelayed(streamingHeartbeatRunnable!!, 8000)
     }
 
     private fun stopStreamingHeartbeatTimer() {
@@ -485,7 +545,7 @@ class DjiDevice(private val context: Context) {
 
     private fun stopStreamingTimerExpired() {
         djiLogWarn("⚠️ Stop-Stream Timeout nach 10 Sekunden abgelaufen. Erzwinge Trennung.")
-        reset(keepError = true)
+        reset(keepError = false)
     }
 
     private fun setState(newState: DjiDeviceState, error: String? = null) {
@@ -580,6 +640,7 @@ class DjiDevice(private val context: Context) {
 
     fun disconnect() {
         userInitiatedStop = true
+        streamEstablished = false
         cancelReconnect()
         djiLogInfo("disconnect() explizit aufgerufen.")
         cancelPendingConnect()
@@ -662,6 +723,13 @@ class DjiDevice(private val context: Context) {
                 }
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 cancelReconnect()
+                if (streamEstablished && !userInitiatedStop) {
+                    djiLogInfo("ℹ️ BLE-Verbindung getrennt (Status $status), aber Stream auf Osmo läuft weiter! Plane stille BLE-Wiederverbindung...")
+                    cleanupBleForStreamingReconnect()
+                    scheduleReconnect()
+                    return
+                }
+
                 val isGatt133 = status == 133 || status == 0x85
                 val isTimeout = status == 8 || status == 0x08 || status == 0x22
                 
@@ -1021,6 +1089,13 @@ class DjiDevice(private val context: Context) {
     }
 
     private fun processPairing() {
+        if (streamEstablished && !userInitiatedStop) {
+            djiLogInfo("✓ BLE-Wiederverbindung zu laufender Osmo hergestellt! Überspringe sendStopStream(), nehme Telemetrie wieder auf.")
+            reconnectAttempts = 0
+            lastError = null
+            setState(DjiDeviceState.STREAMING)
+            return
+        }
         sendStopStream()
         setState(DjiDeviceState.CLEANING_UP)
     }
@@ -1157,6 +1232,7 @@ class DjiDevice(private val context: Context) {
             return
         }
         djiLogInfo("🎉 START_STREAMING bestätigt (0x8C2C)! Live-Streaming ist jetzt AKTIV (STREAMING).")
+        streamEstablished = true
         reconnectAttempts = 0
         seenActiveStreamInCurrentSession = false
         setState(DjiDeviceState.STREAMING)

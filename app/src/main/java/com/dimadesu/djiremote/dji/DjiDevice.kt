@@ -395,7 +395,8 @@ class DjiDevice(private val context: Context) {
                 else -> 10000L
             }
             reconnectAttempts++
-            djiLogInfo("Stiller BLE-Reconnect während aktivem Stream geplant in ${delay}ms (Versuch #$reconnectAttempts)")
+            djiLogInfo("BLE-Reconnect während aktivem Stream geplant in ${delay}ms (Versuch #$reconnectAttempts)")
+            setState(DjiDeviceState.RECONNECTING)
             reconnectRunnable = Runnable {
                 val addr = deviceAddress
                 if (!addr.isNullOrEmpty() && streamEstablished && !userInitiatedStop) {
@@ -457,8 +458,16 @@ class DjiDevice(private val context: Context) {
      * last TX, last RX, exception, and WiFi information.
      */
     fun failWithError(reason: String, details: String? = null, exception: Throwable? = null) {
+        val shortSummary = if (!details.isNullOrBlank()) {
+            if (details.contains(reason)) details else "$reason: $details"
+        } else {
+            reason
+        }
+
         if (streamEstablished && !userInitiatedStop) {
-            djiLogWarn("⚠️ BLE-Fehler während laufendem Stream ($reason: ${details ?: ""}) – Osmo streamt weiter, plane stillen BLE-Reconnect...")
+            djiLogWarn("⚠️ BLE-Fehler während laufendem Stream ($reason: ${details ?: ""}) – plane Reconnect...")
+            lastError = shortSummary
+            setState(DjiDeviceState.RECONNECTING, error = shortSummary)
             cleanupBleForStreamingReconnect()
             scheduleReconnect()
             return
@@ -480,11 +489,6 @@ class DjiDevice(private val context: Context) {
             if (exception != null) append("\nException: ${exception.javaClass.simpleName}: ${exception.message}")
         }
 
-        val shortSummary = if (!details.isNullOrBlank()) {
-            if (details.contains(reason)) details else "$reason: $details"
-        } else {
-            reason
-        }
         lastError = shortSummary
         djiLogError("❌ FEHLER AUFGETRETEN:\n$fullDiagnostic", exception)
 
@@ -724,7 +728,11 @@ class DjiDevice(private val context: Context) {
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 cancelReconnect()
                 if (streamEstablished && !userInitiatedStop) {
-                    djiLogInfo("ℹ️ BLE-Verbindung getrennt (Status $status), aber Stream auf Osmo läuft weiter! Plane stille BLE-Wiederverbindung...")
+                    val isTimeout = status == 8 || status == 0x08 || status == 0x22
+                    val reason = if (isTimeout) "Kamera außer Bluetooth-Reichweite" else "Bluetooth-Verbindung unterbrochen"
+                    djiLogInfo("ℹ️ BLE getrennt ($status), aber Osmo streamt weiter. Plane Reconnect...")
+                    lastError = reason
+                    setState(DjiDeviceState.RECONNECTING, error = reason)
                     cleanupBleForStreamingReconnect()
                     scheduleReconnect()
                     return

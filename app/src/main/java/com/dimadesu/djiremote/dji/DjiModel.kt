@@ -128,20 +128,8 @@ object DjiModel : DjiDeviceDelegate {
     override fun djiDeviceStreamingState(device: DjiDevice, state: DjiDeviceState, error: String?) {
         scope.launch(Dispatchers.Main) {
             val existing = getSettingsForDevice(device) ?: return@launch
-            // Solange der Stream auf der Osmo aktiv läuft (isStreamEstablished),
-            // bleibt der nach außen sichtbare Status durchgehend auf STREAMING,
-            // auch wenn das Handy außer Bluetooth-Reichweite ist und im Hintergrund still BLE wiederverbindet.
-            val effectiveState = if (
-                device.isStreamEstablished() &&
-                state != DjiDeviceState.STOPPING_STREAM &&
-                state != DjiDeviceState.IDLE
-            ) {
-                DjiDeviceState.STREAMING
-            } else {
-                state
-            }
 
-            val newState = when (effectiveState) {
+            val newState = when (state) {
                 DjiDeviceState.IDLE -> SettingsDjiDeviceState.IDLE
                 DjiDeviceState.DISCOVERING -> SettingsDjiDeviceState.DISCOVERING
                 DjiDeviceState.CONNECTING -> SettingsDjiDeviceState.CONNECTING
@@ -158,8 +146,6 @@ object DjiModel : DjiDeviceDelegate {
                 DjiDeviceState.RECONNECTING -> SettingsDjiDeviceState.RECONNECTING
             }
 
-            val effectiveError = if (effectiveState == DjiDeviceState.STREAMING) null else error
-
             var updated = existing.copy(
                 state = newState,
                 batteryPercentage = device.getBatteryPercentage(),
@@ -167,9 +153,9 @@ object DjiModel : DjiDeviceDelegate {
                 liveBitrateKbps = device.getLiveBitrateKbps()
             )
 
-            if (effectiveError != null) {
+            if (error != null) {
                 updated = updated.copy(
-                    lastError = effectiveError,
+                    lastError = error,
                     lastErrorTimestamp = System.currentTimeMillis()
                 )
             } else if (newState == SettingsDjiDeviceState.STREAMING) {
@@ -180,7 +166,7 @@ object DjiModel : DjiDeviceDelegate {
                 )
             }
 
-            when (effectiveState) {
+            when (state) {
                 DjiDeviceState.IDLE, DjiDeviceState.WIFI_SETUP_FAILED -> {
                     updated = updated.copy(isStarted = false, reconnectAttempt = 0, streamingStartedAt = null)
                 }

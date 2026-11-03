@@ -569,33 +569,10 @@ class DjiDevice(private val context: Context) {
     private fun triggerStreamRestartAfterBatterySwap() {
         stopStreamVerificationTimer()
         streamEstablished = false
-        val addr = deviceAddress
-        val ssid = wifiSsid
-        val pwd = wifiPassword
-        val rtmp = rtmpUrl
-        val res = resolution
-        val fps = this.fps
-        val bitrate = this.bitrateKbps
-        val stab = imageStabilization
-        val model = model
-        if (!addr.isNullOrEmpty() && !ssid.isNullOrEmpty() && !rtmp.isNullOrEmpty() && res != null) {
-            djiLogInfo("🔄 Starte automatische Neu-Initialisierung des Livestreams nach Akkuwechsel/Neustart...")
-            startLiveStream(
-                addr,
-                ssid,
-                pwd ?: "",
-                rtmp,
-                res,
-                fps,
-                bitrate,
-                stab ?: SettingsDjiDeviceImageStabilization.OFF,
-                model,
-                isReconnectAttempt = true
-            )
-        } else {
-            djiLogWarn("Automatischer Stream-Restart nicht möglich: Parameter unvollständig. Gehe in IDLE.")
-            reset(keepError = false)
-        }
+        djiLogInfo("🔄 Starte sofortige Neu-Initialisierung des Livestreams nach Akkuwechsel über bestehende BLE-Verbindung...")
+        startStartStreamingTimer()
+        sendStopStream()
+        setState(DjiDeviceState.CLEANING_UP)
     }
 
     private fun stopStreamingTimerExpired() {
@@ -1157,7 +1134,7 @@ class DjiDevice(private val context: Context) {
             djiLogInfo("✓ BLE-Wiederverbindung hergestellt. Verifiziere Stream-Status der Kamera vor Übergang zu STREAMING...")
             reconnectAttempts = 0
             lastError = null
-            // Bleibe vorerst in RECONNECTING, bis die Kamera per Broadcast bestätigt, dass sie tatsächlich noch streamt!
+            setState(DjiDeviceState.RECONNECTING)
             startStreamVerificationTimer()
             return
         }

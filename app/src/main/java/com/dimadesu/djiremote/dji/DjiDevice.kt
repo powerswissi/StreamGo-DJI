@@ -128,6 +128,7 @@ class DjiDevice(private val context: Context) {
     private var reconnectAttempts: Int = 0
     private var reconnectRunnable: Runnable? = null
     private var connectRunnable: Runnable? = null
+    private var streamVerificationRunnable: Runnable? = null
     private var lastGattReleaseAt: Long = 0L
     private var seenActiveStreamInCurrentSession: Boolean = false
     private companion object {
@@ -280,6 +281,7 @@ class DjiDevice(private val context: Context) {
         stopStartStreamingTimer()
         stopStopStreamingTimer()
         stopStreamingHeartbeatTimer()
+        stopStreamVerificationTimer()
         cancelPendingConnect()
         releaseGatt()
         rxBuffer = ByteArray(0)
@@ -320,6 +322,7 @@ class DjiDevice(private val context: Context) {
         stopStartStreamingTimer()
         stopStopStreamingTimer()
         stopStreamingHeartbeatTimer()
+        stopStreamVerificationTimer()
         cancelPendingConnect()
 
         releaseGatt()
@@ -545,6 +548,54 @@ class DjiDevice(private val context: Context) {
     private fun stopStopStreamingTimer() {
         stopStreamingRunnable?.let { mainHandler.removeCallbacks(it) }
         stopStreamingRunnable = null
+    }
+
+    private fun startStreamVerificationTimer() {
+        stopStreamVerificationTimer()
+        streamVerificationRunnable = Runnable {
+            if (state == DjiDeviceState.RECONNECTING && streamEstablished && !userInitiatedStop) {
+                djiLogWarn("⚠️ Stream-Verifikations-Timeout (2.5s) nach BLE-Reconnect: Keine aktive Stream-Telemetrie von DJI empfangen. Kamera befindet sich vermutlich im Startbildschirm (z. B. nach Akkuwechsel). Starte Livestream neu...")
+                triggerStreamRestartAfterBatterySwap()
+            }
+        }
+        mainHandler.postDelayed(streamVerificationRunnable!!, 2500L)
+    }
+
+    private fun stopStreamVerificationTimer() {
+        streamVerificationRunnable?.let { mainHandler.removeCallbacks(it) }
+        streamVerificationRunnable = null
+    }
+
+    private fun triggerStreamRestartAfterBatterySwap() {
+        stopStreamVerificationTimer()
+        streamEstablished = false
+        val addr = deviceAddress
+        val ssid = wifiSsid
+        val pwd = wifiPassword
+        val rtmp = rtmpUrl
+        val res = resolution
+        val fps = this.fps
+        val bitrate = this.bitrateKbps
+        val stab = imageStabilization
+        val model = model
+        if (!addr.isNullOrEmpty() && !ssid.isNullOrEmpty() && !rtmp.isNullOrEmpty() && res != null) {
+            djiLogInfo("🔄 Starte automatische Neu-Initialisierung des Livestreams nach Akkuwechsel/Neustart...")
+            startLiveStream(
+                addr,
+                ssid,
+                pwd ?: "",
+                rtmp,
+                res,
+                fps,
+                bitrate,
+                stab ?: SettingsDjiDeviceImageStabilization.OFF,
+                model,
+                isReconnectAttempt = true
+            )
+        } else {
+            djiLogWarn("Automatischer Stream-Restart nicht möglich: Parameter unvollständig. Gehe in IDLE.")
+            reset(keepError = false)
+        }
     }
 
     private fun stopStreamingTimerExpired() {
@@ -979,6 +1030,11 @@ class DjiDevice(private val context: Context) {
             DjiDeviceState.STARTING_STREAM -> processStartingStream(message)
             DjiDeviceState.STREAMING -> processStreaming(message)
             DjiDeviceState.STOPPING_STREAM -> processStoppingStream(message)
+            DjiDeviceState.RECONNECTING -> {
+                // Wenn wir im Reconnect nach Verbindungsverlust sind und auf Broadcast-Telemetrie warten,
+                // prüfen wir hier, ob der Stream noch aktiv ist oder ob die Kamera neu gestartet wurde.
+                processReconnectingMessage(message)
+            }
             DjiDeviceState.CONNECTING -> {
                 djiLog("Nachricht in CONNECTING-Zustand ignoriert")
             }
@@ -1098,14 +1154,50 @@ class DjiDevice(private val context: Context) {
 
     private fun processPairing() {
         if (streamEstablished && !userInitiatedStop) {
-            djiLogInfo("✓ BLE-Wiederverbindung zu laufender Osmo hergestellt! Überspringe sendStopStream(), nehme Telemetrie wieder auf.")
+            djiLogInfo("✓ BLE-Wiederverbindung hergestellt. Verifiziere Stream-Status der Kamera vor Übergang zu STREAMING...")
             reconnectAttempts = 0
             lastError = null
-            setState(DjiDeviceState.STREAMING)
+            // Bleibe vorerst in RECONNECTING, bis die Kamera per Broadcast bestätigt, dass sie tatsächlich noch streamt!
+            startStreamVerificationTimer()
             return
         }
         sendStopStream()
         setState(DjiDeviceState.CLEANING_UP)
+    }
+
+    private fun processReconnectingMessage(message: DjiMessage) {
+        when (message.type) {
+            0x020D00 -> {
+                // Akku/Temperatur während Reconnect empfangen
+                if (message.payload.size >= 21) {
+                    batteryPercentage = message.payload[20].toInt() and 0xFF
+                }
+                if (message.payload.size >= 23) {
+                    val rawTemp = ((message.payload[22].toInt() and 0xFF) shl 8) or (message.payload[21].toInt() and 0xFF)
+                    val tempC = if (rawTemp in 100..900) rawTemp / 10 else rawTemp
+                    if (tempC in 15..95) cameraTemperature = tempC
+                }
+            }
+            BROADCAST_STATUS_TYPE_1, BROADCAST_STATUS_TYPE_2 -> {
+                if (message.payload.isNotEmpty()) {
+                    val streamState = message.payload[0].toInt() and 0xFF
+                    val streamFlag = if (message.payload.size >= 2) message.payload[1].toInt() and 0xFF else 0
+                    val isStreamActive = (streamFlag and 0x08) != 0 && streamState == 0x02
+                    djiLogInfo("Stream-Verifikation während RECONNECTING: State=0x${streamState.toString(16)}, Flag=0x${streamFlag.toString(16)} (isStreamActive=$isStreamActive)")
+
+                    if (isStreamActive) {
+                        djiLogInfo("✓ Bestätigt: Kamera streamt tatsächlich noch autonom! Gehe zu STREAMING.")
+                        stopStreamVerificationTimer()
+                        seenActiveStreamInCurrentSession = true
+                        startStreamingHeartbeatTimer()
+                        setState(DjiDeviceState.STREAMING)
+                    } else {
+                        djiLogWarn("⚠️ Kamera ist NICHT im Stream (State=0x${streamState.toString(16)}, Flag=0x${streamFlag.toString(16)}), sondern vermutlich im Startbildschirm nach Akkuwechsel. Starte Livestream neu...")
+                        triggerStreamRestartAfterBatterySwap()
+                    }
+                }
+            }
+        }
     }
 
     private fun processCleaningUp(response: DjiMessage) {
